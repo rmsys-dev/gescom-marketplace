@@ -1,0 +1,218 @@
+@import 'tailwindcss';
+@import 'tw-animate-css';
+@import 'shadcn/tailwind.css';
+@import '@fontsource-variable/inter/wght.css';
+@import '@fontsource/poppins/latin.css';
+
+/* Tema claro. O variant dark não acompanha o sistema operacional. */
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-sans);
+  --font-poppins: var(--font-poppins);
+  --font-heading: var(--font-sans);
+
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary-hover: var(--primary-hover);
+  --color-primary-active: var(--primary-active);
+  --color-secondary: var(--secondary-surface);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary-solid: var(--secondary);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-destructive: var(--destructive);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-info: var(--info);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+
+  --color-footer-top: var(--footer-top);
+  --color-footer-top-hover: var(--footer-top-hover);
+  --color-footer-legal: var(--footer-legal);
+
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+  --radius-3xl: calc(var(--radius) * 2.2);
+  --radius-4xl: calc(var(--radius) * 2.6);
+
+  --shadow-card: 0 2px 12px rgb(15 23 42 / 0.06);
+}
+
+/*
+ * Paleta: altere apenas --primary e --secondary.
+ * --background permanece #f6f7f8.
+ *
+ * --primary é a cor de ação (botões, links, ícones).
+ * --secondary é o segundo tom da marca (hover, info, realces).
+ * bg-secondary é o tom suave desse secundário sobre o fundo fixo.
+ */
+:root {
+  --font-sans: 'Inter Variable', ui-sans-serif, system-ui, sans-serif;
+  --font-poppins: 'Poppins', ui-sans-serif, system-ui, sans-serif;
+  --radius: 0.5rem;
+
+  --background: #f6f7f8;
+  --foreground: #1d2329;
+  --card: #ffffff;
+  --card-foreground: var(--foreground);
+  --popover: var(--card);
+  --popover-foreground: var(--foreground);
+  --muted: #eef1f3;
+  --muted-foreground: #6c7278;
+  --border: #e4e8eb;
+  --input: var(--card);
+
+  --primary: #28617e;
+  --secondary: #4c99ab;
+
+  --primary-foreground: #ffffff;
+  --primary-hover: var(--secondary);
+  --primary-active: color-mix(in srgb, var(--primary) 72%, black);
+  --secondary-surface: color-mix(in srgb, var(--secondary) 10%, var(--background));
+  --secondary-foreground: var(--primary);
+  --accent: color-mix(in srgb, var(--primary) 45%, var(--secondary));
+  --accent-foreground: var(--primary-foreground);
+  --ring: var(--primary);
+  --info: var(--secondary);
+
+  --success: #22c55e;
+  --warning: #f59e0b;
+  --destructive: #ef4444;
+
+  --chart-1: var(--primary);
+  --chart-2: var(--accent);
+  --chart-3: var(--muted-foreground);
+  --chart-4: var(--secondary);
+  --chart-5: var(--warning);
+
+  --sidebar: var(--card);
+  --sidebar-foreground: var(--foreground);
+  --sidebar-primary: var(--primary);
+  --sidebar-primary-foreground: var(--primary-foreground);
+  --sidebar-accent: var(--secondary-surface);
+  --sidebar-accent-foreground: var(--primary);
+  --sidebar-border: var(--border);
+  --sidebar-ring: var(--ring);
+
+  /* Faixa superior do rodapé. A faixa legal escurece --secondary. */
+  --footer-top: var(--primary);
+  --footer-top-hover: color-mix(in srgb, var(--primary) 82%, white);
+  --footer-legal: color-mix(in srgb, var(--secondary) 46%, black);
+}
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+    overflow-x: clip;
+    color-scheme: light;
+    @apply font-sans;
+  }
+
+  * {
+    @apply border-border outline-ring/50;
+  }
+
+  body {
+    @apply bg-background font-sans text-foreground;
+    font-size: 16px;
+    overflow-x: clip;
+  }
+
+  button:not(:disabled),
+  [role='button']:not(:disabled) {
+    cursor: pointer;
+  }
+
+  button,
+  a,
+  [role='button'] {
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+
+  html {
+    scroll-behavior: auto;
+  }
+}
+
+@layer utilities {
+  .scrollbar-none {
+    scrollbar-width: none;
+  }
+
+  .scrollbar-none::-webkit-scrollbar {
+    display: none;
+  }
+
+  .pb-store {
+    padding-bottom: calc(4.75rem + env(safe-area-inset-bottom));
+  }
+
+  /* Folga para a barra inferior não cobrir o fim do rodapé. */
+  .pb-footer {
+    padding-bottom: calc(8.5rem + env(safe-area-inset-bottom));
+  }
+
+  .pb-footer-product {
+    padding-bottom: calc(13rem + env(safe-area-inset-bottom));
+  }
+
+  .buy-bar {
+    bottom: calc(3.5rem + env(safe-area-inset-bottom));
+  }
+
+  @media (min-width: 768px) {
+    .pb-store {
+      padding-bottom: 2.5rem;
+    }
+
+    .pb-footer,
+    .pb-footer-product {
+      padding-bottom: 0;
+    }
+
+    .buy-bar {
+      bottom: 0;
+    }
+  }
+}
