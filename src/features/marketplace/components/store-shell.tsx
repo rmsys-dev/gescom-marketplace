@@ -142,10 +142,10 @@ function AccountActions() {
 
   return (
     <>
-      <Button asChild variant="outline" className="h-10 rounded-full px-4" tooltip={false}>
+      <Button asChild variant="default" className="h-10 rounded-full px-4" tooltip={false}>
         <Link href="/entrar">Entrar</Link>
       </Button>
-      <Button asChild className="h-10 rounded-full px-4" tooltip={false}>
+      <Button asChild variant="outline" className="h-10 text-primary rounded-full px-4" tooltip={false}>
         <Link href="/cadastro">Criar conta</Link>
       </Button>
     </>
