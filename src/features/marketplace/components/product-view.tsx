@@ -191,7 +191,7 @@ export function ProductView({ slug }: { slug: string }) {
                 disabled={soldOut}
                 onClick={() => add(false)}
               >
-                Adicionar
+                Adicionar ao carrinho
               </Button>
               <Button
                 type="button"
@@ -287,7 +287,7 @@ export function ProductView({ slug }: { slug: string }) {
             disabled={soldOut}
             onClick={() => add(false)}
           >
-            Adicionar
+            Adicionar ao carrinho
           </Button>
           <Button
             type="button"

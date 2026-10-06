@@ -218,14 +218,20 @@ export function Field({
 export function ProductGridSkeleton() {
   return (
     <ul
-      className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6"
+      className="scrollbar-none -mx-4 flex gap-3 overflow-hidden px-4 md:mx-0 md:grid md:grid-cols-3 md:gap-4 md:px-0 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6"
       aria-hidden
     >
       {Array.from({ length: 6 }, (_, index) => (
-        <li key={index} className="space-y-2">
-          <Skeleton className="aspect-square w-full rounded-2xl" />
-          <Skeleton className="h-4 w-4/5" />
-          <Skeleton className="h-4 w-1/2" />
+        <li
+          key={index}
+          className="w-[min(78vw,18.5rem)] shrink-0 min-[480px]:w-[min(46vw,18.5rem)] md:w-auto"
+        >
+          <div className="space-y-2 rounded-2xl bg-card p-2 shadow-card ring-1 ring-border">
+            <Skeleton className="aspect-square w-full rounded-xl" />
+            <Skeleton className="h-4 w-4/5" />
+            <Skeleton className="h-3 w-1/2" />
+            <Skeleton className="h-6 w-2/5" />
+          </div>
         </li>
       ))}
     </ul>

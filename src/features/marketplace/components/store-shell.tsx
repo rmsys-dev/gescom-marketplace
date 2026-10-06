@@ -26,6 +26,7 @@ import { SearchForm } from '@/features/marketplace/components/search-form';
 import { useMarketplace } from '@/features/marketplace/store';
 import { Button } from '@/shared/components/ui/button';
 import { cn } from '@/shared/lib/utils';
+import { Tooltip, TooltipProvider, TooltipTrigger, TooltipContent } from '@/shared/components/ui/tooltip';
 
 type MobileNavItem =
   | { kind: 'link'; href: string; label: string; icon: LucideIcon }
@@ -54,18 +55,27 @@ function CartLink() {
   const count = cart.reduce((sum, line) => sum + line.quantity, 0);
 
   return (
-    <Link
-      href="/carrinho"
-      className="relative inline-flex size-11 shrink-0 items-center justify-center rounded-lg text-foreground hover:bg-accent/10"
-      aria-label={count > 0 ? `Carrinho, ${count} itens` : 'Carrinho'}
-    >
-      <ShoppingBag className="size-5" />
-      {count > 0 ? (
-        <span className="absolute top-1 right-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-semibold text-primary-foreground">
-          {count > 9 ? '9+' : count}
-        </span>
-      ) : null}
-    </Link>
+    <TooltipProvider>
+      <Tooltip delayDuration={100}>
+        <TooltipTrigger asChild>
+          <Link
+            href="/carrinho"
+            className="relative inline-flex size-11 shrink-0 items-center justify-center rounded-lg text-foreground hover:bg-transparent hover:text-primary"
+            aria-label={count > 0 ? `Carrinho, ${count} itens` : 'Carrinho'}
+          >
+            <ShoppingBag className="size-5" />
+            {count > 0 ? (
+              <span className="absolute top-1 right-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[8px] font-semibold text-primary-foreground">
+                {count > 9 ? '9+' : count}
+              </span>
+            ) : null}
+          </Link>
+        </TooltipTrigger>
+        <TooltipContent>
+          <p>Ir ao carrinho</p>
+        </TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
   );
 }
 
@@ -106,17 +116,26 @@ function AccountActions() {
 
   if (user) {
     return (
-      <Button
-        asChild
-        variant="outline"
-        size="icon"
-        className="size-10 rounded-full"
-        tooltip={false}
-      >
-        <Link href="/conta" aria-label="Conta">
-          <UserRound />
-        </Link>
-      </Button>
+      <TooltipProvider>
+        <Tooltip delayDuration={100}>
+          <TooltipTrigger asChild>
+            <Button
+              asChild
+              variant="outline"
+              size="icon"
+              className="size-12 rounded-full"
+              tooltip={false}
+            >
+              <Link href="/conta" aria-label="Conta" className="text-primary text-center">
+                <UserRound />
+              </Link>
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>
+            <p>Minha conta</p>
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
     );
   }
 

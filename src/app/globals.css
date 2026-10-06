@@ -175,7 +175,23 @@
   }
 }
 
+@keyframes heart-pop {
+  0% {
+    transform: scale(1);
+  }
+  40% {
+    transform: scale(1.28);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
 @layer utilities {
+  .heart-pop {
+    animation: heart-pop 0.4s ease-out;
+  }
+
   .scrollbar-none {
     scrollbar-width: none;
   }

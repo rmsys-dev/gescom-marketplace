@@ -350,7 +350,7 @@ export function AddressesView() {
         <div className="flex items-center justify-between gap-3">
           <h1 className="text-2xl font-semibold tracking-tight">Endereços</h1>
           <Button type="button" className="h-11" tooltip={false} onClick={() => setOpen(true)}>
-            Adicionar
+            Adicionar ao carrinho
           </Button>
         </div>
         {addresses.length === 0 ? (
