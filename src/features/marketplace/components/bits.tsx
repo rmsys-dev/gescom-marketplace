@@ -215,6 +215,21 @@ export function Field({
   );
 }
 
+export function ListingSkeleton() {
+  return (
+    <div className="md:grid md:grid-cols-[15rem_minmax(0,1fr)] md:items-start md:gap-6">
+      <div className="hidden space-y-3 md:block" aria-hidden>
+        <Skeleton className="h-5 w-24" />
+        <Skeleton className="h-4 w-32" />
+        <Skeleton className="h-10 w-full" />
+        <Skeleton className="h-28 w-full" />
+        <Skeleton className="h-40 w-full" />
+      </div>
+      <ProductGridSkeleton />
+    </div>
+  );
+}
+
 export function ProductGridSkeleton() {
   return (
     <ul

@@ -1,23 +1,30 @@
 'use client';
 
-import { ChevronLeft, ChevronRight, Sparkles } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Search, Sparkles } from 'lucide-react';
 import { useLenis } from 'lenis/react';
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 import { useEffect, useMemo, useRef, useState } from 'react';
 
-import { countInCategory, paginate } from '@/features/marketplace/catalog';
-import { SectionHeader } from '@/features/marketplace/components/bits';
+import { countInCategory, filterCatalog, isOnSale, paginate } from '@/features/marketplace/catalog';
+import { EmptyState, SectionHeader } from '@/features/marketplace/components/bits';
 import { CATEGORY_ICONS } from '@/features/marketplace/components/category-bar';
+import { FilterSidebar, ListingFrame } from '@/features/marketplace/components/filter-sidebar';
 import { ProductGrid } from '@/features/marketplace/components/product-card';
 import { CATEGORIES } from '@/features/marketplace/data';
+import {
+  countActiveFilters,
+  filtersToCatalogQuery,
+  readFilters,
+} from '@/features/marketplace/filters';
 import { useMarketplace } from '@/features/marketplace/store';
 import { Button } from '@/shared/components/ui/button';
 import { cn } from '@/shared/lib/utils';
 
 const CATALOG_PAGE_QUERIES = [
-  { query: '(min-width: 96rem)', size: 12 },
-  { query: '(min-width: 80rem)', size: 15 },
-  { query: '(min-width: 64rem)', size: 8 },
+  { query: '(min-width: 96rem)', size: 10 },
+  { query: '(min-width: 80rem)', size: 8 },
+  { query: '(min-width: 64rem)', size: 6 },
   { query: '(min-width: 48rem)', size: 6 },
 ] as const;
 
@@ -134,21 +141,29 @@ function CatalogPager({
 
 export function HomeView() {
   const { products } = useMarketplace();
+  const params = useSearchParams();
   const lenis = useLenis();
   const catalogRef = useRef<HTMLElement>(null);
   const pageSize = useCatalogPageSize();
   const [page, setPage] = useState(1);
-  const offers = products
-    .filter((product) => product.compareAtPrice && product.stock > 0)
-    .slice(0, 4);
-  const rated = [...products]
-    .filter((product) => product.stock > 0)
-    .sort((a, b) => b.rating - a.rating)
-    .slice(0, 4);
+  const filterKey = params.toString();
+  const [filterSeen, setFilterSeen] = useState(filterKey);
+  const filters = useMemo(() => readFilters(new URLSearchParams(filterKey)), [filterKey]);
+  const filtering = countActiveFilters(filters) > 0;
   const available = useMemo(() => products.filter((product) => product.stock > 0), [products]);
-  const catalog = paginate(available, page, pageSize);
+  const filtered = useMemo(
+    () => filterCatalog(available, filtersToCatalogQuery(filters)),
+    [available, filters],
+  );
+  const offers = available.filter((product) => isOnSale(product)).slice(0, 4);
+  const rated = [...available].sort((a, b) => b.rating - a.rating).slice(0, 4);
+  const pageForList = filterSeen === filterKey ? page : 1;
+  const catalog = paginate(filtering ? filtered : available, pageForList, pageSize);
 
-  if (catalog.page !== page) setPage(catalog.page);
+  if (filterSeen !== filterKey) {
+    setFilterSeen(filterKey);
+    setPage(1);
+  } else if (catalog.page !== page) setPage(catalog.page);
 
   function changePage(next: number) {
     setPage(next);
@@ -165,36 +180,55 @@ export function HomeView() {
   }
 
   return (
-    <div className="space-y-8">
-      <section className="space-y-3">
-        <SectionHeader title="Ofertas" href="/busca?ordem=menor-preco" />
-        <ProductGrid products={offers} />
-      </section>
+    <ListingFrame sidebar={<FilterSidebar products={available} heading="Todas" />}>
+      {filtering && filtered.length === 0 ? (
+        <EmptyState
+          icon={Search}
+          title="Nada encontrado"
+          description="Limpe os filtros para ver o catálogo de novo."
+          action={
+            <Button asChild className="h-12 w-full" tooltip={false}>
+              <Link href="/">Limpar filtros</Link>
+            </Button>
+          }
+        />
+      ) : (
+        <div className="space-y-8">
+          {filtering ? null : (
+            <>
+              <section className="space-y-3">
+                <SectionHeader title="Ofertas" href="/busca?ordem=menor-preco" />
+                <ProductGrid products={offers} fit="aside" />
+              </section>
 
-      <section className="space-y-3">
-        <SectionHeader title="Bem avaliados" href="/busca?ordem=avaliacao" />
-        <ProductGrid products={rated} />
-      </section>
+              <section className="space-y-3">
+                <SectionHeader title="Bem avaliados" href="/busca?ordem=avaliacao" />
+                <ProductGrid products={rated} fit="aside" />
+              </section>
+            </>
+          )}
 
-      <section
-        ref={catalogRef}
-        className="scroll-mt-[calc(var(--store-header-h,4.5rem)+0.75rem)] space-y-3"
-        aria-labelledby="todos-os-produtos"
-      >
-        <div className="flex items-baseline justify-between gap-3">
-          <h2 id="todos-os-produtos" className="text-lg font-semibold tracking-tight">
-            Todos os produtos
-          </h2>
-          <p className="text-sm text-muted-foreground tabular-nums" aria-live="polite">
-            {catalog.total === 0
-              ? 'Nenhum disponível'
-              : `${catalog.from}–${catalog.to} de ${catalog.total}`}
-          </p>
+          <section
+            ref={catalogRef}
+            className="scroll-mt-[calc(var(--store-header-h,4.5rem)+0.75rem)] space-y-3"
+            aria-labelledby="todos-os-produtos"
+          >
+            <div className="flex items-baseline justify-between gap-3">
+              <h2 id="todos-os-produtos" className="text-lg font-semibold tracking-tight">
+                Todos os produtos
+              </h2>
+              <p className="text-sm text-muted-foreground tabular-nums" aria-live="polite">
+                {catalog.total === 0
+                  ? 'Nenhum disponível'
+                  : `${catalog.from}–${catalog.to} de ${catalog.total}`}
+              </p>
+            </div>
+            <ProductGrid products={catalog.items} layout="catalog" fit="aside" />
+            <CatalogPager page={catalog.page} pages={catalog.pages} onPage={changePage} />
+          </section>
         </div>
-        <ProductGrid products={catalog.items} layout="catalog" />
-        <CatalogPager page={catalog.page} pages={catalog.pages} onPage={changePage} />
-      </section>
-    </div>
+      )}
+    </ListingFrame>
   );
 }
 

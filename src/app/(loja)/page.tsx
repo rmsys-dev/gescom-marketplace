@@ -1,5 +1,7 @@
 import type { Metadata } from 'next';
+import { Suspense } from 'react';
 
+import { ListingSkeleton } from '@/features/marketplace/components/bits';
 import { HomeView } from '@/features/marketplace/components/home-view';
 
 export const metadata: Metadata = {
@@ -7,5 +9,9 @@ export const metadata: Metadata = {
 };
 
 export default function HomePage() {
-  return <HomeView />;
+  return (
+    <Suspense fallback={<ListingSkeleton />}>
+      <HomeView />
+    </Suspense>
+  );
 }

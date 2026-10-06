@@ -3,7 +3,15 @@
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useState } from 'react';
 
-import type { CatalogSort, PriceBand, ProductCondition } from '@/features/marketplace/types';
+import {
+  CATALOG_SORTS,
+  countActiveFilters,
+  EMPTY_FILTERS,
+  filterPatch,
+  PRICE_BANDS,
+  readFilters,
+  type FilterDraft,
+} from '@/features/marketplace/filters';
 import { Button } from '@/shared/components/ui/button';
 import {
   Dialog,
@@ -15,70 +23,9 @@ import {
 } from '@/shared/components/ui/dialog';
 import { cn } from '@/shared/lib/utils';
 
-const SORTS: { id: CatalogSort; label: string }[] = [
-  { id: 'relevancia', label: 'Relevância' },
-  { id: 'menor-preco', label: 'Menor preço' },
-  { id: 'maior-preco', label: 'Maior preço' },
-  { id: 'avaliacao', label: 'Avaliação' },
-];
-
-const PRICES: { id: PriceBand; label: string }[] = [
-  { id: 'ate-50', label: 'Até R$ 50' },
-  { id: '50-150', label: 'R$ 50 a R$ 150' },
-  { id: '150-400', label: 'R$ 150 a R$ 400' },
-  { id: '400-mais', label: 'Acima de R$ 400' },
-];
-
-type FilterDraft = {
-  sort: CatalogSort;
-  price: PriceBand;
-  condition: ProductCondition | '';
-  freeShipping: boolean;
-};
-
-const EMPTY_FILTERS: FilterDraft = {
-  sort: 'relevancia',
-  price: '',
-  condition: '',
-  freeShipping: false,
-};
-
 function isCatalogPath(pathname: string) {
   return (
-    pathname === '/busca' ||
-    pathname.startsWith('/categoria/') ||
-    pathname === '/conta/favoritos'
-  );
-}
-
-export function readFilters(params: { get(name: string): string | null }): FilterDraft {
-  const sort = params.get('ordem');
-  const price = params.get('preco');
-  return {
-    sort:
-      sort === 'menor-preco' || sort === 'maior-preco' || sort === 'avaliacao'
-        ? sort
-        : 'relevancia',
-    price:
-      price === 'ate-50' || price === '50-150' || price === '150-400' || price === '400-mais'
-        ? price
-        : '',
-    condition:
-      params.get('condicao') === 'usado'
-        ? 'usado'
-        : params.get('condicao') === 'novo'
-          ? 'novo'
-          : '',
-    freeShipping: params.get('frete') === 'gratis',
-  };
-}
-
-export function countActiveFilters(filters: FilterDraft) {
-  return (
-    Number(filters.sort !== 'relevancia') +
-    Number(Boolean(filters.price)) +
-    Number(Boolean(filters.condition)) +
-    Number(filters.freeShipping)
+    pathname === '/busca' || pathname.startsWith('/categoria/') || pathname === '/conta/favoritos'
   );
 }
 
@@ -103,20 +50,18 @@ export function FilterDialog({
 
   function commit(next: FilterDraft) {
     const search = new URLSearchParams(params.toString());
-    const entries: Record<string, string | null> = {
-      ordem: next.sort === 'relevancia' ? null : next.sort,
-      preco: next.price || null,
-      condicao: next.condition || null,
-      frete: next.freeShipping ? 'gratis' : null,
-    };
+    const entries = filterPatch(next);
     for (const [key, value] of Object.entries(entries)) {
       if (!value) search.delete(key);
       else search.set(key, value);
     }
-    const query = search.toString();
+    const nextQuery = search.toString();
     const target = isCatalogPath(pathname) ? pathname : '/busca';
-    const href = query ? `${target}?${query}` : target;
+    const href = nextQuery ? `${target}?${nextQuery}` : target;
     if (!isCatalogPath(pathname) && countActiveFilters(next) === 0) {
+      if (nextQuery !== query) {
+        router.replace(nextQuery ? `${pathname}?${nextQuery}` : pathname, { scroll: false });
+      }
       onOpenChange(false);
       return;
     }
@@ -140,7 +85,7 @@ export function FilterDialog({
           <fieldset className="space-y-2">
             <legend className="text-sm font-medium">Ordenar</legend>
             <div className="grid grid-cols-2 gap-2">
-              {SORTS.map((item) => (
+              {CATALOG_SORTS.map((item) => (
                 <Choice
                   key={item.id}
                   pressed={draft.sort === item.id}
@@ -154,7 +99,7 @@ export function FilterDialog({
           <fieldset className="space-y-2">
             <legend className="text-sm font-medium">Preço</legend>
             <div className="grid grid-cols-2 gap-2">
-              {PRICES.map((item) => (
+              {PRICE_BANDS.map((item) => (
                 <Choice
                   key={item.id}
                   pressed={draft.price === item.id}
@@ -162,6 +107,8 @@ export function FilterDialog({
                     setDraft((current) => ({
                       ...current,
                       price: current.price === item.id ? '' : item.id,
+                      priceMin: null,
+                      priceMax: null,
                     }))
                   }
                 >

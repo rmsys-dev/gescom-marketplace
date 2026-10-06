@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  catalogFacets,
   filterCatalog,
   formatSearchTerm,
   paginate,
@@ -8,7 +9,13 @@ import {
   resolveCart,
 } from '@/features/marketplace/catalog';
 import { PRODUCTS } from '@/features/marketplace/data';
-import { cartTotals, discountPercent, parseReais } from '@/features/marketplace/money';
+import { countActiveFilters, readFilters } from '@/features/marketplace/filters';
+import {
+  cartTotals,
+  discountPercent,
+  formatPriceParam,
+  parseReais,
+} from '@/features/marketplace/money';
 
 describe('catálogo', () => {
   it('deixa maiúscula só a primeira letra do termo', () => {
@@ -25,6 +32,45 @@ describe('catálogo', () => {
   it('aplica faixa de preço', () => {
     const result = filterCatalog(PRODUCTS, { price: 'ate-50' });
     expect(result.map((product) => product.id).sort()).toEqual(['p-cafe', 'p-livro']);
+  });
+
+  it('aplica mínimo e máximo no lugar da faixa', () => {
+    const result = filterCatalog(PRODUCTS, {
+      price: 'ate-50',
+      priceMin: 100_000,
+      priceMax: 200_000,
+    });
+    expect(result.map((product) => product.id)).toEqual(['p-celular']);
+  });
+
+  it('filtra produtos em oferta', () => {
+    const result = filterCatalog(PRODUCTS, { onSale: true });
+    expect(result.map((product) => product.id).sort()).toEqual([
+      'p-fone',
+      'p-luminaria',
+      'p-tenis',
+    ]);
+  });
+
+  it('conta as categorias sem prender a categoria atual', () => {
+    const facets = catalogFacets(PRODUCTS, { category: 'moda', freeShipping: true });
+    expect(facets.total).toBe(
+      filterCatalog(PRODUCTS, { category: 'moda', freeShipping: true }).length,
+    );
+    expect(
+      facets.categories.find((category) => category.slug === 'eletronicos')?.count,
+    ).toBeGreaterThan(0);
+    expect(facets.categories.find((category) => category.slug === 'moda')?.count).toBe(
+      facets.total,
+    );
+  });
+
+  it('lê faixa livre e oferta na query', () => {
+    const filters = readFilters(new URLSearchParams('preco=ate-50&min=10&oferta=1&frete=gratis'));
+    expect(filters.price).toBe('');
+    expect(filters.priceMin).toBe(1_000);
+    expect(filters.onSale).toBe(true);
+    expect(countActiveFilters(filters)).toBe(3);
   });
 
   it('ordena as categorias da busca pela quantidade de produtos', () => {
@@ -92,5 +138,7 @@ describe('preço', () => {
     expect(discountPercent(34_990, 42_990)).toBe(19);
     expect(parseReais('1.299,90')).toBe(129_990);
     expect(parseReais('0')).toBeNull();
+    expect(formatPriceParam(5_000)).toBe('50');
+    expect(formatPriceParam(129_990)).toBe('1299,90');
   });
 });

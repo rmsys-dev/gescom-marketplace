@@ -3,7 +3,7 @@ import { notFound } from 'next/navigation';
 import { Suspense } from 'react';
 
 import { getCategory } from '@/features/marketplace/catalog';
-import { ProductGridSkeleton } from '@/features/marketplace/components/bits';
+import { ListingSkeleton } from '@/features/marketplace/components/bits';
 import { CatalogView } from '@/features/marketplace/components/catalog-view';
 
 type PageProps = { params: Promise<{ slug: string }> };
@@ -20,7 +20,7 @@ export default async function CategoryPage({ params }: PageProps) {
   if (!category) notFound();
 
   return (
-    <Suspense fallback={<ProductGridSkeleton />}>
+    <Suspense fallback={<ListingSkeleton />}>
       <CatalogView
         title={category.name}
         description={category.description}

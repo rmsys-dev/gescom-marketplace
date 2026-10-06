@@ -73,6 +73,11 @@ const RAIL_IMAGE_SIZES = '(max-width: 768px) 78vw, (max-width: 1280px) 30vw, 16v
 const CATALOG_IMAGE_SIZES =
   '(max-width: 768px) 46vw, (max-width: 1024px) 30vw, (max-width: 1280px) 22vw, (max-width: 1536px) 18vw, 15vw';
 
+const COLUMN_CLASS = {
+  page: 'md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6',
+  aside: 'md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5',
+} as const;
+
 export function ProductCard({
   product,
   imageSizes = RAIL_IMAGE_SIZES,
@@ -223,13 +228,15 @@ export function ProductCard({
 export function ProductGrid({
   products,
   layout = 'rail',
+  fit = 'page',
 }: {
   products: Product[];
   layout?: 'rail' | 'catalog';
+  fit?: 'page' | 'aside';
 }) {
   if (layout === 'catalog') {
     return (
-      <ul className="grid grid-cols-2 items-stretch gap-3 md:grid-cols-3 md:gap-4 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6">
+      <ul className={cn('grid grid-cols-2 items-stretch gap-3 md:gap-4', COLUMN_CLASS[fit])}>
         {products.map((product) => (
           <li key={product.id} className="min-w-0">
             <ProductCard product={product} imageSizes={CATALOG_IMAGE_SIZES} />
@@ -241,7 +248,10 @@ export function ProductGrid({
 
   return (
     <ul
-      className="scrollbar-none -mx-4 flex snap-x snap-proximity scroll-px-4 items-stretch gap-3 overflow-x-auto overscroll-x-contain px-4 py-1 motion-safe:scroll-smooth md:mx-0 md:grid md:snap-none md:grid-cols-3 md:gap-4 md:overflow-visible md:px-0 md:py-0 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6"
+      className={cn(
+        'scrollbar-none -mx-4 flex snap-x snap-proximity scroll-px-4 items-stretch gap-3 overflow-x-auto overscroll-x-contain px-4 py-1 motion-safe:scroll-smooth md:mx-0 md:grid md:snap-none md:gap-4 md:overflow-visible md:px-0 md:py-0',
+        COLUMN_CLASS[fit],
+      )}
       data-lenis-prevent-touch
     >
       {products.map((product) => (

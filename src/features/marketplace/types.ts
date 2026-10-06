@@ -101,6 +101,9 @@ export type CatalogQuery = {
   freeShipping?: boolean;
   condition?: ProductCondition | '';
   price?: PriceBand;
+  priceMin?: number | null;
+  priceMax?: number | null;
+  onSale?: boolean;
   sort?: CatalogSort;
   favoriteIds?: string[];
   favoritesOnly?: boolean;

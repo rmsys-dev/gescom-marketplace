@@ -27,6 +27,12 @@ export function parseReais(value: string) {
   return Math.round(amount * 100);
 }
 
+export function formatPriceParam(cents: number) {
+  const reais = cents / 100;
+  if (Number.isInteger(reais)) return String(reais);
+  return reais.toFixed(2).replace('.', ',');
+}
+
 export function cartTotals(lines: { price: number; quantity: number; freeShipping: boolean }[]) {
   const subtotal = lines.reduce((sum, line) => sum + line.price * line.quantity, 0);
   const qualifies =

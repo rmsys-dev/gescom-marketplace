@@ -16,18 +16,20 @@ import { Suspense, useEffect, useRef, useState } from 'react';
 
 import { CategoryBar } from '@/features/marketplace/components/category-bar';
 import { footerReserveClass, SiteFooter } from '@/features/marketplace/components/site-footer';
-import {
-  countActiveFilters,
-  FilterDialog,
-  readFilters,
-} from '@/features/marketplace/components/filter-dialog';
+import { FilterDialog } from '@/features/marketplace/components/filter-dialog';
+import { countActiveFilters, readFilters } from '@/features/marketplace/filters';
 import { PromoCarousel } from '@/features/marketplace/components/promo-carousel';
 import { formatSearchTerm } from '@/features/marketplace/catalog';
 import { SearchForm } from '@/features/marketplace/components/search-form';
 import { useMarketplace } from '@/features/marketplace/store';
 import { Button } from '@/shared/components/ui/button';
 import { cn } from '@/shared/lib/utils';
-import { Tooltip, TooltipProvider, TooltipTrigger, TooltipContent } from '@/shared/components/ui/tooltip';
+import {
+  Tooltip,
+  TooltipProvider,
+  TooltipTrigger,
+  TooltipContent,
+} from '@/shared/components/ui/tooltip';
 
 type MobileNavItem =
   | { kind: 'link'; href: string; label: string; icon: LucideIcon }
@@ -127,7 +129,7 @@ function AccountActions() {
               className="size-12 rounded-full"
               tooltip={false}
             >
-              <Link href="/conta" aria-label="Conta" className="text-primary text-center">
+              <Link href="/conta" aria-label="Conta" className="text-center text-primary">
                 <UserRound />
               </Link>
             </Button>
@@ -145,7 +147,12 @@ function AccountActions() {
       <Button asChild variant="default" className="h-10 rounded-full px-4" tooltip={false}>
         <Link href="/entrar">Entrar</Link>
       </Button>
-      <Button asChild variant="outline" className="h-10 text-primary rounded-full px-4" tooltip={false}>
+      <Button
+        asChild
+        variant="outline"
+        className="h-10 rounded-full px-4 text-primary"
+        tooltip={false}
+      >
         <Link href="/cadastro">Criar conta</Link>
       </Button>
     </>

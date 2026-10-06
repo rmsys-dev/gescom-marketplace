@@ -1,4 +1,5 @@
 import { CATEGORIES, PRODUCTS } from '@/features/marketplace/data';
+import { CONDITIONS, PRICE_BANDS } from '@/features/marketplace/filters';
 import type { CartLine, CatalogQuery, Product } from '@/features/marketplace/types';
 
 export function catalogOf() {
@@ -28,8 +29,26 @@ function fold(value: string) {
   return value.toLocaleLowerCase('pt-BR').normalize('NFD').replace(/\p{M}/gu, '');
 }
 
-function matchesPrice(price: number, band: CatalogQuery['price']) {
+export function isOnSale(product: Product) {
+  return product.compareAtPrice != null && product.compareAtPrice > product.price;
+}
+
+function matchesPrice(price: number, query: CatalogQuery) {
+  let min = query.priceMin ?? null;
+  let max = query.priceMax ?? null;
+  if (min != null && max != null && min > max) {
+    const swap = min;
+    min = max;
+    max = swap;
+  }
+  if (min != null || max != null) {
+    if (min != null && price < min) return false;
+    if (max != null && price > max) return false;
+    return true;
+  }
+
   const reais = price / 100;
+  const band = query.price;
   if (!band) return true;
   if (band === 'ate-50') return reais <= 50;
   if (band === '50-150') return reais > 50 && reais <= 150;
@@ -43,7 +62,8 @@ export function filterCatalog(products: Product[], query: CatalogQuery) {
     if (query.category && product.categorySlug !== query.category) return false;
     if (query.freeShipping && !product.freeShipping) return false;
     if (query.condition && product.condition !== query.condition) return false;
-    if (!matchesPrice(product.price, query.price)) return false;
+    if (query.onSale && !isOnSale(product)) return false;
+    if (!matchesPrice(product.price, query)) return false;
     if (query.favoritesOnly && !query.favoriteIds?.includes(product.id)) return false;
     if (!term) return true;
     const category = getCategory(product.categorySlug);
@@ -88,6 +108,42 @@ export function relatedProducts(product: Product, products: Product[]) {
         item.categorySlug === product.categorySlug && item.id !== product.id && item.stock > 0,
     )
     .slice(0, 4);
+}
+
+export function catalogFacets(products: Product[], query: CatalogQuery) {
+  const categoryQuery = { ...query, category: undefined };
+  const priceQuery = { ...query, price: '' as const, priceMin: null, priceMax: null };
+  const conditionQuery = { ...query, condition: '' as const };
+  const shippingQuery = { ...query, freeShipping: false };
+  const saleQuery = { ...query, onSale: false };
+  const rangeActive = query.priceMin != null || query.priceMax != null;
+
+  const categories = CATEGORIES.map((category) => ({
+    slug: category.slug,
+    name: category.name,
+    count: filterCatalog(products, { ...categoryQuery, category: category.slug }).length,
+  }))
+    .filter((item) => item.count > 0 || item.slug === query.category)
+    .sort((a, b) => b.count - a.count || a.name.localeCompare(b.name, 'pt-BR'));
+
+  const prices = PRICE_BANDS.map((band) => ({
+    ...band,
+    count: filterCatalog(products, { ...priceQuery, price: band.id }).length,
+  })).filter((item) => item.count > 0 || (!rangeActive && query.price === item.id));
+
+  const conditions = CONDITIONS.map((item) => ({
+    ...item,
+    count: filterCatalog(products, { ...conditionQuery, condition: item.id }).length,
+  })).filter((item) => item.count > 0 || query.condition === item.id);
+
+  return {
+    total: filterCatalog(products, query).length,
+    categories,
+    prices,
+    conditions,
+    freeShipping: filterCatalog(products, { ...shippingQuery, freeShipping: true }).length,
+    onSale: filterCatalog(products, { ...saleQuery, onSale: true }).length,
+  };
 }
 
 export function countInCategory(slug: string, products: Product[]) {
