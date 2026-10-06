@@ -82,6 +82,7 @@ export function ProductView({ slug }: { slug: string }) {
         <div>
           <div
             className="-mx-4 flex snap-x snap-mandatory overflow-x-auto md:mx-0 md:overflow-hidden md:rounded-2xl"
+            data-lenis-prevent-touch
             onScroll={(event) => {
               const element = event.currentTarget;
               if (!element.clientWidth) return;

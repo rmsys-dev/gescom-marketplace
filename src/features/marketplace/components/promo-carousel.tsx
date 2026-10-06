@@ -244,6 +244,7 @@ export function PromoCarousel() {
         <div
           ref={viewportRef}
           className="cursor-grab touch-pan-y overflow-hidden py-3 select-none active:cursor-grabbing"
+          data-lenis-prevent-touch
           onClickCapture={(event) => {
             if (!suppressClickRef.current) return;
             event.preventDefault();

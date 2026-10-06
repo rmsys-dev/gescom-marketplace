@@ -136,7 +136,7 @@ export function FilterDialog({
           <DialogTitle>Filtros</DialogTitle>
           <DialogDescription>Escolha ordenação, preço, condição e frete.</DialogDescription>
         </DialogHeader>
-        <div className="flex flex-col gap-5 overflow-y-auto px-4 py-3">
+        <div className="flex flex-col gap-5 overflow-y-auto px-4 py-3" data-lenis-prevent-touch>
           <fieldset className="space-y-2">
             <legend className="text-sm font-medium">Ordenar</legend>
             <div className="grid grid-cols-2 gap-2">

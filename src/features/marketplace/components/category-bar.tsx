@@ -29,7 +29,10 @@ export function CategoryBar() {
 
   return (
     <nav aria-label="Categorias" className="border-b border-border bg-background">
-      <div className="overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+      <div
+        className="overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+        data-lenis-prevent-touch
+      >
         <ul className="mx-auto flex w-max min-w-full items-start justify-start gap-2 px-3 py-3 md:justify-center md:px-4">
           {CATEGORIES.map((category) => {
             const Icon = CATEGORY_ICONS[category.slug] ?? Sparkles;

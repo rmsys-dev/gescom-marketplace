@@ -91,7 +91,10 @@ export function CatalogView({
       {showRecent && !q && recentQueries.length > 0 ? (
         <div className="space-y-2">
           <SectionHeader title="Buscas recentes" />
-          <div className="scrollbar-none -mx-4 flex gap-2 overflow-x-auto px-4">
+          <div
+            className="scrollbar-none -mx-4 flex gap-2 overflow-x-auto px-4"
+            data-lenis-prevent-touch
+          >
             {recentQueries.map((query) => (
               <Link
                 key={query}

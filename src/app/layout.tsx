@@ -1,7 +1,9 @@
 ﻿import type { Metadata, Viewport } from 'next';
 
+import 'lenis/dist/lenis.css';
 import './globals.css';
 import { QueryProvider } from '@/shared/components/providers/clients/query-client-provider';
+import { SmoothScroll } from '@/shared/components/providers/clients/smooth-scroll';
 import { TooltipProvider } from '@/shared/components/ui/tooltip';
 import { cn } from '@/shared/lib/utils';
 import { Toaster } from 'sonner';
@@ -31,12 +33,14 @@ export default function RootLayout({
   return (
     <html lang="pt-BR" className={cn('antialiased', 'font-poppins')}>
       <body>
-        <QueryProvider>
-          <TooltipProvider>
-            {children}
-            <Toaster richColors position="top-center" theme="light" />
-          </TooltipProvider>
-        </QueryProvider>
+        <SmoothScroll>
+          <QueryProvider>
+            <TooltipProvider>
+              {children}
+              <Toaster richColors position="top-center" theme="light" />
+            </TooltipProvider>
+          </QueryProvider>
+        </SmoothScroll>
       </body>
     </html>
   );

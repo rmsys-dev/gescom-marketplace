@@ -448,6 +448,7 @@ function AddressSheet({
       <SheetContent
         side="bottom"
         className="max-h-[92dvh] overflow-y-auto rounded-t-3xl pb-[env(safe-area-inset-bottom)]"
+        data-lenis-prevent-touch
       >
         <SheetHeader>
           <SheetTitle>Novo endereço</SheetTitle>
