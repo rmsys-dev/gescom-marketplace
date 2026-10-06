@@ -22,6 +22,7 @@ import {
   readFilters,
 } from '@/features/marketplace/components/filter-dialog';
 import { PromoCarousel } from '@/features/marketplace/components/promo-carousel';
+import { formatSearchTerm } from '@/features/marketplace/catalog';
 import { SearchForm } from '@/features/marketplace/components/search-form';
 import { useMarketplace } from '@/features/marketplace/store';
 import { Button } from '@/shared/components/ui/button';
@@ -108,7 +109,7 @@ function HeaderSearch() {
 
 function HeaderSearchQuery() {
   const params = useSearchParams();
-  return <SearchForm defaultQuery={params.get('q') ?? ''} />;
+  return <SearchForm defaultQuery={formatSearchTerm(params.get('q') ?? '')} />;
 }
 
 function AccountActions() {

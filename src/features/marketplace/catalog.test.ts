@@ -1,10 +1,22 @@
 import { describe, expect, it } from 'vitest';
 
-import { filterCatalog, paginate, resolveCart } from '@/features/marketplace/catalog';
+import {
+  filterCatalog,
+  formatSearchTerm,
+  paginate,
+  relatedCategories,
+  resolveCart,
+} from '@/features/marketplace/catalog';
 import { PRODUCTS } from '@/features/marketplace/data';
 import { cartTotals, discountPercent, parseReais } from '@/features/marketplace/money';
 
 describe('catálogo', () => {
+  it('deixa maiúscula só a primeira letra do termo', () => {
+    expect(formatSearchTerm('casa')).toBe('Casa');
+    expect(formatSearchTerm('  fone bluetooth  ')).toBe('Fone bluetooth');
+    expect(formatSearchTerm('Época')).toBe('Época');
+  });
+
   it('encontra produto ignorando acento', () => {
     const result = filterCatalog(PRODUCTS, { q: 'cafe' });
     expect(result.map((product) => product.id)).toContain('p-cafe');
@@ -13,6 +25,19 @@ describe('catálogo', () => {
   it('aplica faixa de preço', () => {
     const result = filterCatalog(PRODUCTS, { price: 'ate-50' });
     expect(result.map((product) => product.id).sort()).toEqual(['p-cafe', 'p-livro']);
+  });
+
+  it('ordena as categorias da busca pela quantidade de produtos', () => {
+    const picked = PRODUCTS.filter((product) =>
+      ['p-luminaria', 'p-planta', 'p-panelas', 'p-fone', 'p-tenis', 'p-relogio'].includes(
+        product.id,
+      ),
+    );
+    expect(relatedCategories(picked).map((category) => category.slug)).toEqual([
+      'casa',
+      'moda',
+      'eletronicos',
+    ]);
   });
 
   it('ordena pelo menor preço', () => {

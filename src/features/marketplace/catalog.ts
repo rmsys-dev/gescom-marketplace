@@ -17,6 +17,13 @@ export function getProductById(id: string) {
   return PRODUCTS.find((product) => product.id === id) ?? null;
 }
 
+export function formatSearchTerm(value: string) {
+  const term = value.trim();
+  const first = term.charAt(0);
+  if (!first) return '';
+  return first.toLocaleUpperCase('pt-BR') + term.slice(1);
+}
+
 function fold(value: string) {
   return value.toLocaleLowerCase('pt-BR').normalize('NFD').replace(/\p{M}/gu, '');
 }
@@ -58,6 +65,20 @@ export function resolveCart(cart: CartLine[], products: Product[]) {
     ...line,
     product: products.find((product) => product.id === line.productId) ?? null,
   }));
+}
+
+export function relatedCategories(products: Product[]) {
+  const counts = new Map<string, number>();
+  for (const product of products) {
+    counts.set(product.categorySlug, (counts.get(product.categorySlug) ?? 0) + 1);
+  }
+
+  return [...counts.entries()]
+    .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0], 'pt-BR'))
+    .flatMap(([slug]) => {
+      const category = getCategory(slug);
+      return category ? [category] : [];
+    });
 }
 
 export function relatedProducts(product: Product, products: Product[]) {

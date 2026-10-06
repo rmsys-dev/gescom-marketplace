@@ -3,13 +3,20 @@
 import { Search } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
-import { useEffect, useMemo } from 'react';
+import { Fragment, useEffect, useMemo } from 'react';
 
-import { filterCatalog } from '@/features/marketplace/catalog';
+import { filterCatalog, formatSearchTerm, relatedCategories } from '@/features/marketplace/catalog';
 import { EmptyState, SectionHeader } from '@/features/marketplace/components/bits';
 import { ProductGrid } from '@/features/marketplace/components/product-card';
 import { rememberQuery, useMarketplace } from '@/features/marketplace/store';
 import type { CatalogSort, PriceBand, ProductCondition } from '@/features/marketplace/types';
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbSeparator,
+} from '@/shared/components/ui/breadcrumb';
 import { Button } from '@/shared/components/ui/button';
 
 export function CatalogView({
@@ -81,11 +88,50 @@ export function CatalogView({
     Number(Boolean(condition)) +
     Number(freeShipping);
 
+  const term = formatSearchTerm(q);
+  const searching = pathname === '/busca' && term.length > 0;
+  const categories = searching ? relatedCategories(result) : [];
+  const resultLabel = `${result.length} ${result.length === 1 ? 'resultado' : 'resultados'}`;
+
   return (
     <div className="space-y-4">
       <header className="space-y-1">
-        <h1 className="text-2xl font-semibold tracking-tight">{title}</h1>
-        {description ? <p className="text-sm text-muted-foreground">{description}</p> : null}
+        {searching ? (
+          <>
+            <h1 className="flex flex-wrap items-baseline gap-x-3 text-2xl font-semibold tracking-tight">
+              <span>{term}</span>
+              <span className="text-sm font-normal text-muted-foreground" aria-live="polite">
+                {resultLabel}
+              </span>
+            </h1>
+            {categories.length > 0 ? (
+              <Breadcrumb aria-label="Categorias relacionadas">
+                <BreadcrumbList>
+                  <BreadcrumbItem>
+                    <BreadcrumbLink asChild>
+                      <Link href="/">Início</Link>
+                    </BreadcrumbLink>
+                  </BreadcrumbItem>
+                  {categories.map((category, index) => (
+                    <Fragment key={category.slug}>
+                      <BreadcrumbSeparator>{index === 0 ? undefined : '·'}</BreadcrumbSeparator>
+                      <BreadcrumbItem>
+                        <BreadcrumbLink asChild>
+                          <Link href={`/categoria/${category.slug}`}>{category.name}</Link>
+                        </BreadcrumbLink>
+                      </BreadcrumbItem>
+                    </Fragment>
+                  ))}
+                </BreadcrumbList>
+              </Breadcrumb>
+            ) : null}
+          </>
+        ) : (
+          <>
+            <h1 className="text-2xl font-semibold tracking-tight">{title}</h1>
+            {description ? <p className="text-sm text-muted-foreground">{description}</p> : null}
+          </>
+        )}
       </header>
 
       {showRecent && !q && recentQueries.length > 0 ? (
@@ -101,18 +147,20 @@ export function CatalogView({
                 href={`/busca?q=${encodeURIComponent(query)}`}
                 className="inline-flex h-10 shrink-0 items-center rounded-full bg-secondary px-3 text-sm font-medium text-secondary-foreground"
               >
-                {query}
+                {formatSearchTerm(query)}
               </Link>
             ))}
           </div>
         </div>
       ) : null}
 
-      <p className="text-sm text-muted-foreground" aria-live="polite">
-        {hydrated || !favoritesOnly
-          ? `${result.length} ${result.length === 1 ? 'produto' : 'produtos'}`
-          : 'Carregando produtos'}
-      </p>
+      {searching ? null : (
+        <p className="text-sm text-muted-foreground" aria-live="polite">
+          {hydrated || !favoritesOnly
+            ? `${result.length} ${result.length === 1 ? 'produto' : 'produtos'}`
+            : 'Carregando produtos'}
+        </p>
+      )}
 
       {result.length === 0 ? (
         <EmptyState
