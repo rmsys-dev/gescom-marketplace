@@ -19,26 +19,13 @@ export function footerReserveClass(pathname: string, hasMobileNav: boolean) {
   return 'pb-footer';
 }
 
-function scrollToTop() {
-  const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-  const root = document.scrollingElement ?? document.documentElement;
-  root.scrollTo({ top: 0, behavior: reduce ? 'auto' : 'smooth' });
-}
-
 export function SiteFooter({ className }: { className?: string }) {
   const year = new Date().getFullYear();
 
   return (
     <footer className={cn('bg-primary text-primary-foreground', className)}>
-      <button
-        type="button"
-        onClick={scrollToTop}
-        className="block w-full bg-primary py-3.5 text-center text-sm text-primary-foreground outline-offset-4 hover:bg-primary-hover hover:underline"
-      >
-        Voltar ao início
-      </button>
 
-      <div className="bg-secondary text-secondary-foreground">
+      <div className="bg-secondary text-secondary-foreground border-t border-primary/15">
         <div className="mx-auto grid w-full max-w-5xl gap-8 px-6 py-10 sm:grid-cols-2 md:grid-cols-3 md:gap-10 md:py-12">
           {FOOTER_COLUMNS.map((column) => (
             <nav key={column.title} aria-label={column.title}>
