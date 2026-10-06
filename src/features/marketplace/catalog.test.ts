@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { filterCatalog, resolveCart } from '@/features/marketplace/catalog';
+import { filterCatalog, paginate, resolveCart } from '@/features/marketplace/catalog';
 import { PRODUCTS } from '@/features/marketplace/data';
 import { cartTotals, discountPercent, parseReais } from '@/features/marketplace/money';
 
@@ -20,6 +20,17 @@ describe('catálogo', () => {
     const first = result[0];
     const last = result.at(-1);
     expect(first && last && first.price <= last.price).toBe(true);
+  });
+
+  it('pagina o catálogo e limita a página ao intervalo válido', () => {
+    const page = paginate(PRODUCTS, 2, 5);
+    expect(page.items).toHaveLength(5);
+    expect(page.from).toBe(6);
+    expect(page.to).toBe(10);
+    expect(page.pages).toBe(Math.ceil(PRODUCTS.length / 5));
+
+    expect(paginate(PRODUCTS, 99, 5).page).toBe(Math.ceil(PRODUCTS.length / 5));
+    expect(paginate([], 1, 6)).toMatchObject({ items: [], page: 1, pages: 1, from: 0, to: 0 });
   });
 });
 

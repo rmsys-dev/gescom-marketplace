@@ -72,3 +72,21 @@ export function relatedProducts(product: Product, products: Product[]) {
 export function countInCategory(slug: string, products: Product[]) {
   return products.filter((product) => product.categorySlug === slug).length;
 }
+
+export function paginate<T>(items: readonly T[], page: number, pageSize: number) {
+  const size = Math.max(1, Math.trunc(pageSize) || 1);
+  const total = items.length;
+  const pages = Math.max(1, Math.ceil(total / size));
+  const current = Math.min(Math.max(1, Math.trunc(page) || 1), pages);
+  const start = (current - 1) * size;
+  const slice = items.slice(start, start + size);
+
+  return {
+    items: slice,
+    page: current,
+    pages,
+    total,
+    from: total === 0 ? 0 : start + 1,
+    to: start + slice.length,
+  };
+}
