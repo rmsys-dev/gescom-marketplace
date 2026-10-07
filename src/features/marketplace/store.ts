@@ -215,6 +215,16 @@ export function removeAddress(id: string) {
   commit({ addresses: clientState.addresses.filter((address) => address.id !== id) });
 }
 
+let checkoutProductIds: string[] | null = null;
+
+export function setCheckoutProductIds(ids: string[] | null) {
+  checkoutProductIds = ids;
+}
+
+export function getCheckoutProductIds() {
+  return checkoutProductIds;
+}
+
 export function placeOrder(input: {
   contact: SessionUser;
   address: Address;
@@ -239,9 +249,12 @@ export function placeOrder(input: {
     total: input.total,
   };
 
+  const purchasedIds = new Set(input.items.map((item) => item.productId));
+  checkoutProductIds = null;
+
   const patch: Partial<PersistedMarketplace> = {
     orders: [order, ...clientState.orders],
-    cart: [],
+    cart: clientState.cart.filter((line) => !purchasedIds.has(line.productId)),
   };
 
   if (clientState.user) {

@@ -17,7 +17,12 @@ import {
 } from '@/features/marketplace/masks';
 import { cartTotals, formatBRL } from '@/features/marketplace/money';
 import { schedulePush } from '@/features/marketplace/navigate';
-import { placeOrder, saveAddress, useMarketplace } from '@/features/marketplace/store';
+import {
+  getCheckoutProductIds,
+  placeOrder,
+  saveAddress,
+  useMarketplace,
+} from '@/features/marketplace/store';
 import type { Address, PaymentMethod } from '@/features/marketplace/types';
 import { Button } from '@/shared/components/ui/button';
 import { cn } from '@/shared/lib/utils';
@@ -94,9 +99,10 @@ export function CheckoutView() {
 function CheckoutReady() {
   const router = useRouter();
   const { cart, products, user, addresses } = useMarketplace();
-  const lines = resolveCart(cart, products).flatMap((line) =>
-    line.product ? [{ ...line, product: line.product }] : [],
-  );
+  const picked = getCheckoutProductIds();
+  const lines = resolveCart(cart, products)
+    .flatMap((line) => (line.product ? [{ ...line, product: line.product }] : []))
+    .filter((line) => (picked ? picked.includes(line.product.id) : true));
   const totals = cartTotals(
     lines.map((line) => ({
       price: line.product.price,
