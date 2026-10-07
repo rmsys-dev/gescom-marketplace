@@ -1,7 +1,5 @@
 'use client';
 
-import './globals.css';
-
 export default function GlobalError({
   reset,
 }: {
@@ -10,16 +8,42 @@ export default function GlobalError({
 }) {
   return (
     <html lang="pt-BR">
-      <body className="flex min-h-dvh items-center justify-center bg-background px-6 text-foreground">
-        <main className="max-w-sm space-y-4 text-center">
-          <h1 className="text-xl font-semibold">Não foi possível carregar o marketplace</h1>
-          <p className="text-sm text-muted-foreground">
+      <body
+        style={{
+          margin: 0,
+          minHeight: '100dvh',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: '1.5rem',
+          background: '#f7f7f8',
+          color: '#1a1a1a',
+          fontFamily: 'Poppins, Inter, system-ui, sans-serif',
+        }}
+      >
+        <main style={{ maxWidth: '24rem', textAlign: 'center' }}>
+          <h1 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 600 }}>
+            Não foi possível carregar o marketplace
+          </h1>
+          <p style={{ margin: '1rem 0 0', fontSize: '0.875rem', color: '#5c6570' }}>
             Atualize a página ou tente de novo em instantes.
           </p>
           <button
             type="button"
-            className="h-12 w-full rounded-xl bg-primary text-base font-medium text-primary-foreground"
             onClick={() => reset()}
+            style={{
+              marginTop: '1rem',
+              height: '3rem',
+              width: '100%',
+              border: 0,
+              borderRadius: '0.75rem',
+              background: '#28617e',
+              color: '#fff',
+              font: 'inherit',
+              fontSize: '1rem',
+              fontWeight: 500,
+              cursor: 'pointer',
+            }}
           >
             Tentar de novo
           </button>
