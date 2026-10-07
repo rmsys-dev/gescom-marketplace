@@ -150,7 +150,7 @@ export function QuantityStepper({
 }) {
   return (
     <div
-      className="inline-flex h-11 items-center rounded-xl border border-border bg-red-500"
+      className="inline-flex h-11 items-center rounded-xl border border-border bg-card"
       role="group"
       aria-label={label}
     >

@@ -11,6 +11,12 @@ export type ProductSpec = {
   value: string;
 };
 
+export type ProductVariant = {
+  id: string;
+  label: string;
+  swatch?: string;
+};
+
 export type Product = {
   id: string;
   slug: string;
@@ -27,6 +33,8 @@ export type Product = {
   condition: ProductCondition;
   freeShipping: boolean;
   specs: ProductSpec[];
+  variantLabel?: string;
+  variants?: ProductVariant[];
 };
 
 export type Review = {
