@@ -12,6 +12,7 @@ import type {
   OrderStatus,
   PaymentMethod,
   SessionUser,
+  UserReview,
 } from '@/features/marketplace/types';
 
 const STORAGE_KEY = 'gescom-marketplace';
@@ -23,6 +24,7 @@ type PersistedMarketplace = {
   favorites: string[];
   addresses: Address[];
   orders: Order[];
+  reviews: UserReview[];
   recentQueries: string[];
 };
 
@@ -37,6 +39,7 @@ const EMPTY: PersistedMarketplace = {
   favorites: [],
   addresses: [],
   orders: [],
+  reviews: [],
   recentQueries: [],
 };
 
@@ -57,6 +60,7 @@ function persist(state: MarketplaceState) {
     favorites: state.favorites,
     addresses: state.addresses,
     orders: state.orders,
+    reviews: state.reviews,
     recentQueries: state.recentQueries,
   };
   localStorage.setItem(STORAGE_KEY, JSON.stringify(rest));
@@ -84,9 +88,10 @@ function readStorage(): PersistedMarketplace | null {
       cart: Array.isArray(parsed.cart) ? parsed.cart : [],
       favorites: Array.isArray(parsed.favorites) ? parsed.favorites : [],
       addresses: Array.isArray(parsed.addresses) ? parsed.addresses : [],
-      orders: Array.isArray(parsed.orders) ? parsed.orders : [],
-      recentQueries: Array.isArray(parsed.recentQueries) ? parsed.recentQueries : [],
-    };
+    orders: Array.isArray(parsed.orders) ? parsed.orders : [],
+    reviews: Array.isArray(parsed.reviews) ? parsed.reviews : [],
+    recentQueries: Array.isArray(parsed.recentQueries) ? parsed.recentQueries : [],
+  };
   } catch {
     return null;
   }
@@ -94,7 +99,15 @@ function readStorage(): PersistedMarketplace | null {
 
 export function hydrateMarketplace() {
   if (clientState.hydrated || typeof window === 'undefined') return;
-  clientState = { ...(readStorage() ?? EMPTY), hydrated: true };
+  const stored = readStorage() ?? EMPTY;
+  clientState = { ...stored, hydrated: true };
+  if (stored.user) {
+    const demoPatch = withDemo(stored.user, clientState);
+    if (demoPatch.orders || demoPatch.addresses) {
+      commit(demoPatch);
+      return;
+    }
+  }
   emit();
 }
 
@@ -111,6 +124,19 @@ function withDemo(user: SessionUser, state: MarketplaceState): Partial<Persisted
       contactName: user.name,
       contactEmail: user.email,
     }));
+  } else {
+    const known = new Set(state.orders.map((order) => order.id));
+    const missing = DEMO_ORDERS.filter((order) => !known.has(order.id));
+    if (missing.length > 0 && state.orders.every((order) => order.demo)) {
+      patch.orders = [
+        ...missing.map((order) => ({
+          ...order,
+          contactName: user.name,
+          contactEmail: user.email,
+        })),
+        ...state.orders,
+      ];
+    }
   }
   return patch;
 }
@@ -273,6 +299,72 @@ export function placeOrder(input: {
 
 export function getOrder(id: string) {
   return clientState.orders.find((order) => order.id === id) ?? null;
+}
+
+export function saveUserReview(input: {
+  productId: string;
+  orderId: string;
+  rating: number;
+  comment: string;
+  anonymous: boolean;
+  photoCount?: number;
+}) {
+  const existing = clientState.reviews.find(
+    (review) => review.productId === input.productId && review.orderId === input.orderId,
+  );
+  if (existing) return existing;
+
+  const review: UserReview = {
+    id: `ur-${Date.now().toString(36)}`,
+    productId: input.productId,
+    orderId: input.orderId,
+    rating: input.rating,
+    comment: input.comment.trim(),
+    anonymous: input.anonymous,
+    photoCount: input.photoCount ?? 0,
+    createdAt: new Date().toISOString(),
+  };
+  commit({ reviews: [review, ...clientState.reviews] });
+  return review;
+}
+
+export function hasUserReviewed(orderId: string, productId: string) {
+  return clientState.reviews.some(
+    (review) => review.orderId === orderId && review.productId === productId,
+  );
+}
+
+export type PendingReviewItem = {
+  orderId: string;
+  orderCode: string;
+  purchasedAt: string;
+  productId: string;
+  name: string;
+  image: string;
+};
+
+export function pendingReviewItems(
+  orders: Order[] = clientState.orders,
+  reviews: UserReview[] = clientState.reviews,
+): PendingReviewItem[] {
+  const reviewed = new Set(reviews.map((review) => `${review.orderId}:${review.productId}`));
+  const pending: PendingReviewItem[] = [];
+  for (const order of orders) {
+    if (order.status !== 'entregue') continue;
+    for (const item of order.items) {
+      const key = `${order.id}:${item.productId}`;
+      if (reviewed.has(key)) continue;
+      pending.push({
+        orderId: order.id,
+        orderCode: order.code,
+        purchasedAt: order.createdAt,
+        productId: item.productId,
+        name: item.name,
+        image: item.image,
+      });
+    }
+  }
+  return pending;
 }
 
 export const ORDER_FLOW: OrderStatus[] = ['confirmado', 'preparando', 'enviado', 'entregue'];

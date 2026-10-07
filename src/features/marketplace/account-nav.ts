@@ -1,4 +1,4 @@
-import { Heart, MapPin, Package, UserRound, type LucideIcon } from 'lucide-react';
+import { Heart, MapPin, Package, Star, UserRound, type LucideIcon } from 'lucide-react';
 
 export type AccountNavItem = {
   href: string;
@@ -13,6 +13,12 @@ export const ACCOUNT_NAV: AccountNavItem[] = [
     label: 'Pedidos',
     hint: 'Acompanhe o que você comprou.',
     icon: Package,
+  },
+  {
+    href: '/conta/avaliacoes',
+    label: 'Avaliações',
+    hint: 'Opine sobre produtos comprados.',
+    icon: Star,
   },
   {
     href: '/conta/favoritos',

@@ -6,25 +6,21 @@ import { useState } from 'react';
 import { z } from 'zod';
 
 import { ACCOUNT_NAV } from '@/features/marketplace/account-nav';
+import { OrderPanel } from '@/features/marketplace/components/account-orders';
 import {
   controlClass,
   EmptyState,
   Field,
-  formatWhen,
-  StatusBadge,
-  STATUS_LABEL,
 } from '@/features/marketplace/components/bits';
 import { UF_OPTIONS } from '@/features/marketplace/data';
 import { maskPhone, maskZip, onlyDigits } from '@/features/marketplace/masks';
-import { formatBRL } from '@/features/marketplace/money';
 import {
-  ORDER_FLOW,
   removeAddress,
   saveAddress,
   updateProfile,
   useMarketplace,
 } from '@/features/marketplace/store';
-import type { Address, Order } from '@/features/marketplace/types';
+import type { Address } from '@/features/marketplace/types';
 import { Button } from '@/shared/components/ui/button';
 import {
   Sheet,
@@ -34,7 +30,12 @@ import {
   SheetTitle,
 } from '@/shared/components/ui/sheet';
 import { Skeleton } from '@/shared/components/ui/skeleton';
-import { cn } from '@/shared/lib/utils';
+
+export { OrdersView, OrderDetail } from '@/features/marketplace/components/account-orders';
+export {
+  CreateReviewView,
+  ReviewsView,
+} from '@/features/marketplace/components/account-reviews';
 
 function userInitials(name: string) {
   const parts = name.trim().split(/\s+/).filter(Boolean);
@@ -135,163 +136,6 @@ export function AccountHome() {
           })}
         </ul>
       </section>
-    </div>
-  );
-}
-
-export function OrdersView() {
-  const { orders } = useMarketplace();
-  return (
-    <div className="space-y-4">
-      <h1 className="hidden text-2xl font-semibold tracking-tight md:block">Pedidos</h1>
-      {orders.length === 0 ? (
-        <EmptyState
-          icon={Package}
-          title="Nenhum pedido"
-          description="Quando você confirmar um checkout, ele aparece aqui."
-          action={
-            <Button asChild className="h-12 w-full" tooltip={false}>
-              <Link href="/busca">Ver produtos</Link>
-            </Button>
-          }
-        />
-      ) : (
-        <ul className="space-y-3">
-          {orders.map((order) => (
-            <li key={order.id}>
-              <OrderCard order={order} />
-            </li>
-          ))}
-        </ul>
-      )}
-    </div>
-  );
-}
-
-function OrderCard({ order }: { order: Order }) {
-  const cover = order.items[0];
-  return (
-    <Link
-      href={`/conta/pedidos/${order.id}`}
-      className="block rounded-2xl bg-card p-4 ring-1 ring-foreground/10"
-    >
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <p className="text-sm font-semibold">{order.code}</p>
-          <p className="text-xs text-muted-foreground">{formatWhen(order.createdAt)}</p>
-        </div>
-        <StatusBadge status={order.status} />
-      </div>
-      <p className="mt-3 line-clamp-2 text-sm">{order.items.map((item) => item.name).join(', ')}</p>
-      <div className="mt-3 flex items-center justify-between text-sm">
-        <span className="text-muted-foreground">
-          {cover
-            ? `${order.items.length} ${order.items.length === 1 ? 'item' : 'itens'}`
-            : 'Sem itens'}
-        </span>
-        <span className="font-semibold">{formatBRL(order.total)}</span>
-      </div>
-      {order.demo ? (
-        <p className="mt-2 text-xs text-muted-foreground">Pedido de demonstração</p>
-      ) : null}
-    </Link>
-  );
-}
-
-export function OrderDetail({ id }: { id: string }) {
-  const { orders, hydrated } = useMarketplace();
-  const order = orders.find((item) => item.id === id);
-
-  if (!hydrated) return <p className="text-sm text-muted-foreground">Carregando pedido…</p>;
-  if (!order) {
-    return (
-      <EmptyState
-        icon={Package}
-        title="Pedido não encontrado"
-        description="Ele não está salvo neste aparelho."
-        action={
-          <Button asChild className="h-12 w-full" tooltip={false}>
-            <Link href="/conta/pedidos">Ver pedidos</Link>
-          </Button>
-        }
-      />
-    );
-  }
-  return <OrderPanel order={order} />;
-}
-
-export function OrderPanel({
-  order,
-  confirmation = false,
-}: {
-  order: Order;
-  confirmation?: boolean;
-}) {
-  const step = ORDER_FLOW.indexOf(order.status);
-  return (
-    <div className="space-y-5">
-      <header className="space-y-1">
-        <p className="text-sm text-muted-foreground">
-          {confirmation ? 'Pedido registrado' : 'Pedido'}
-        </p>
-        <h1 className="text-2xl font-semibold tracking-tight">{order.code}</h1>
-        <p className="text-sm text-muted-foreground">{formatWhen(order.createdAt)}</p>
-      </header>
-      {confirmation ? (
-        <p className="rounded-2xl bg-secondary px-4 py-3 text-sm text-secondary-foreground">
-          Guardamos o pedido neste navegador. Nenhum pagamento foi processado.
-        </p>
-      ) : null}
-      <ol className="grid grid-cols-4 gap-2" aria-label="Situação do pedido">
-        {ORDER_FLOW.map((status, index) => (
-          <li key={status} className="space-y-1">
-            <span
-              className={cn('block h-1 rounded-full', index <= step ? 'bg-primary' : 'bg-muted')}
-            />
-            <span className="block text-[11px] leading-tight text-muted-foreground">
-              {STATUS_LABEL[status]}
-            </span>
-          </li>
-        ))}
-      </ol>
-      <ul className="divide-y divide-border rounded-2xl bg-card ring-1 ring-foreground/10">
-        {order.items.map((item) => (
-          <li
-            key={`${item.productId}-${item.name}`}
-            className="flex items-center justify-between gap-3 px-4 py-3 text-sm"
-          >
-            <span>
-              <span className="block font-medium">{item.name}</span>
-              <span className="text-muted-foreground">Qtd. {item.quantity}</span>
-            </span>
-            <span className="font-medium">{formatBRL(item.price * item.quantity)}</span>
-          </li>
-        ))}
-      </ul>
-      <section className="space-y-1 rounded-2xl bg-card p-4 text-sm ring-1 ring-foreground/10">
-        <h2 className="font-semibold">Entrega</h2>
-        <p>{order.address.recipient}</p>
-        <p className="text-muted-foreground">
-          {order.address.street}, {order.address.number}
-          {order.address.complement ? ` · ${order.address.complement}` : ''} ·{' '}
-          {order.address.district} · {order.address.city}/{order.address.state}
-        </p>
-        <p className="text-muted-foreground">CEP {order.address.zip}</p>
-      </section>
-      <dl className="space-y-2 text-sm">
-        <div className="flex justify-between">
-          <dt className="text-muted-foreground">Subtotal</dt>
-          <dd>{formatBRL(order.subtotal)}</dd>
-        </div>
-        <div className="flex justify-between">
-          <dt className="text-muted-foreground">Frete</dt>
-          <dd>{order.shipping === 0 ? 'Grátis' : formatBRL(order.shipping)}</dd>
-        </div>
-        <div className="flex justify-between text-base font-semibold">
-          <dt>Total</dt>
-          <dd>{formatBRL(order.total)}</dd>
-        </div>
-      </dl>
     </div>
   );
 }

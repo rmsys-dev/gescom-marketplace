@@ -449,6 +449,17 @@ export const DEMO_ADDRESS: Address = {
   state: 'PR',
 };
 
+function demoItem(productId: string, quantity = 1) {
+  const product = PRODUCTS.find((item) => item.id === productId);
+  return {
+    productId,
+    name: product?.name ?? productId,
+    image: product?.images[0] ?? '',
+    price: product?.price ?? 0,
+    quantity,
+  };
+}
+
 export const DEMO_ORDERS: Order[] = [
   {
     id: 'ord-demo-1',
@@ -460,15 +471,7 @@ export const DEMO_ORDERS: Order[] = [
     contactEmail: 'cliente@gescom.app',
     address: DEMO_ADDRESS,
     paymentMethod: 'pix',
-    items: [
-      {
-        productId: 'p-luminaria',
-        name: 'Luminária de mesa articulada',
-        image: PRODUCTS[4]?.images[0] ?? '',
-        price: 24_990,
-        quantity: 1,
-      },
-    ],
+    items: [demoItem('p-luminaria')],
     subtotal: 24_990,
     shipping: 0,
     total: 24_990,
@@ -483,18 +486,55 @@ export const DEMO_ORDERS: Order[] = [
     contactEmail: 'cliente@gescom.app',
     address: DEMO_ADDRESS,
     paymentMethod: 'credito',
-    items: [
-      {
-        productId: 'p-cafe',
-        name: 'Café torrado 500 g',
-        image: PRODUCTS[5]?.images[0] ?? '',
-        price: 2_890,
-        quantity: 2,
-      },
-    ],
+    items: [demoItem('p-cafe', 2)],
     subtotal: 5_780,
     shipping: 1_990,
     total: 7_770,
+  },
+  {
+    id: 'ord-demo-3',
+    code: 'GM-17210',
+    createdAt: '2026-07-10T14:20:00.000Z',
+    status: 'entregue',
+    demo: true,
+    contactName: 'Cliente',
+    contactEmail: 'cliente@gescom.app',
+    address: DEMO_ADDRESS,
+    paymentMethod: 'credito',
+    items: [demoItem('p-fone')],
+    subtotal: 34_990,
+    shipping: 0,
+    total: 34_990,
+  },
+  {
+    id: 'ord-demo-4',
+    code: 'GM-16880',
+    createdAt: '2026-05-12T10:00:00.000Z',
+    status: 'entregue',
+    demo: true,
+    contactName: 'Cliente',
+    contactEmail: 'cliente@gescom.app',
+    address: DEMO_ADDRESS,
+    paymentMethod: 'pix',
+    items: [demoItem('p-tenis')],
+    subtotal: 29_990,
+    shipping: 0,
+    total: 29_990,
+  },
+  {
+    id: 'ord-demo-5',
+    code: 'GM-16104',
+    createdAt: '2026-04-02T16:40:00.000Z',
+    status: 'entregue',
+    demo: true,
+    contactName: 'Cliente',
+    contactEmail: 'cliente@gescom.app',
+    address: DEMO_ADDRESS,
+    paymentMethod: 'boleto',
+    items: [demoItem('p-celular')],
+    subtotal: 189_900,
+    shipping: 0,
+    total: 189_900,
   },
 ];
 

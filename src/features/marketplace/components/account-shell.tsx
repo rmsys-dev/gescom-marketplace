@@ -46,7 +46,11 @@ function accountBreadcrumbs(pathname: string): Crumb[] {
   crumbs.push({ href: section.href, label: section.label });
 
   if (pathname.startsWith('/conta/pedidos/')) {
-    crumbs.push({ label: 'Pedido' });
+    crumbs.push({ label: 'Status da compra' });
+  }
+
+  if (pathname.startsWith('/conta/avaliacoes/nova')) {
+    crumbs.push({ label: 'Criar avaliação' });
   }
 
   return crumbs;

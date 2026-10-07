@@ -46,6 +46,18 @@ export type Review = {
   createdAt: string;
 };
 
+/** Avaliação enviada pelo usuário logado (persistida neste aparelho). */
+export type UserReview = {
+  id: string;
+  productId: string;
+  orderId: string;
+  rating: number;
+  comment: string;
+  anonymous: boolean;
+  photoCount: number;
+  createdAt: string;
+};
+
 export type CartLine = {
   productId: string;
   quantity: number;
