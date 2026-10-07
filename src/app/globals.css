@@ -138,6 +138,12 @@
     @apply font-sans;
   }
 
+  html:has([data-auth-screen]),
+  body:has([data-auth-screen]) {
+    overflow: hidden;
+    height: 100%;
+  }
+
   * {
     @apply border-border outline-ring/50;
   }
