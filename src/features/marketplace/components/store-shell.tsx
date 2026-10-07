@@ -256,39 +256,6 @@ function FilterNavButtonView({
   );
 }
 
-function StoreChrome({ children }: { children: React.ReactNode }) {
-  const [hidden, setHidden] = useState(false);
-
-  useEffect(() => {
-    let lockUntil = 0;
-    const onScroll = () => {
-      const y = window.scrollY;
-      setHidden((current) => {
-        if (!current && y > 48) {
-          lockUntil = performance.now() + 400;
-          return true;
-        }
-        if (current && y < 8 && performance.now() > lockUntil) return false;
-        return current;
-      });
-    };
-    onScroll();
-    window.addEventListener('scroll', onScroll, { passive: true });
-    return () => window.removeEventListener('scroll', onScroll);
-  }, []);
-
-  return (
-    <div
-      className={cn(
-        'grid transition-[grid-template-rows,opacity] duration-300 ease-out motion-reduce:transition-none',
-        hidden ? 'pointer-events-none grid-rows-[0fr] opacity-0' : 'grid-rows-[1fr] opacity-100',
-      )}
-    >
-      <div className="overflow-hidden">{children}</div>
-    </div>
-  );
-}
-
 export function StoreShell({
   children,
   mode = 'browse',
@@ -363,10 +330,10 @@ export function StoreShell({
         )}
       </header>
       {mode === 'browse' && pathname === '/' ? (
-        <StoreChrome>
+        <>
           <PromoCarousel />
           <CategoryBar />
-        </StoreChrome>
+        </>
       ) : null}
       <main id="conteudo" className="mx-auto w-full flex-1 px-4 pt-4 pb-8 md:pb-12">
         {children}
