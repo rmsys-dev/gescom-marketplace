@@ -180,7 +180,7 @@ export function HomeView() {
   }
 
   return (
-    <ListingFrame sidebar={<FilterSidebar products={available} heading="Todas" />}>
+    <ListingFrame sidebar={<FilterSidebar products={available} heading="Menu de filtros" />}>
       {filtering && filtered.length === 0 ? (
         <EmptyState
           icon={Search}

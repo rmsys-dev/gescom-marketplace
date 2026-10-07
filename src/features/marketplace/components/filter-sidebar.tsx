@@ -49,6 +49,13 @@ function listingHref(
   return query ? `${path}?${query}` : path;
 }
 
+function priceDraft(value: string) {
+  const cleaned = value.replace(/[^\d,]/g, '');
+  const [whole = '', ...fractions] = cleaned.split(',');
+  if (fractions.length === 0) return whole;
+  return `${whole},${fractions.join('').slice(0, 2)}`;
+}
+
 function rangeParams(low: string, high: string) {
   let min = parseReais(low);
   let max = parseReais(high);
@@ -113,7 +120,7 @@ export function FilterSidebar({
   return (
     <aside
       aria-label="Filtros"
-      className="sticky top-[calc(var(--store-header-h,4.5rem)+0.75rem)] hidden h-[calc(100dvh-var(--store-header-h,4.5rem)-1.5rem)] w-[15rem] min-w-[15rem] max-w-[15rem] shrink-0 overflow-x-hidden overflow-y-auto overscroll-contain py-0.5 pr-1 md:block"
+      className="sticky top-[calc(var(--store-header-h,4.5rem)+0.75rem)] hidden h-[calc(100dvh-var(--store-header-h,4.5rem)-1.5rem)] w-60 min-w-60 max-w-60 shrink-0 overflow-x-hidden overflow-y-auto overscroll-contain py-0.5 pr-1 md:block"
       data-lenis-prevent
     >
       <div className="w-full min-w-0 space-y-4 overflow-x-clip">
@@ -134,11 +141,11 @@ export function FilterSidebar({
           ) : null}
         </header>
 
-        <div className="flex min-w-0 items-center justify-between gap-3 overflow-x-clip">
+        <div className="flex min-w-0 items-center justify-between gap-3 overflow-x-clip bg-success/10 p-4 rounded-2xl">
           <label htmlFor="filtro-frete" className="min-w-0 cursor-pointer">
             <span className="block text-sm leading-tight font-bold text-success">Frete grátis</span>
-            <span className="mt-0.5 block text-xs leading-snug text-muted-foreground">
-              Em produtos com envio incluso
+            <span className="block text-xs leading-snug text-muted-foreground">
+              Ver produtos com frete grátis
             </span>
           </label>
           <Switch
@@ -254,7 +261,7 @@ export function FilterSidebar({
           </FilterSection>
         ) : null}
 
-        <FilterSection title="Ordenar">
+        <FilterSection title="Ordenar por">
           <ul>
             {CATALOG_SORTS.map((item) => (
               <li key={item.id}>
@@ -270,7 +277,7 @@ export function FilterSidebar({
           </ul>
         </FilterSection>
       </div>
-    </aside>
+    </aside >
   );
 }
 
@@ -313,7 +320,7 @@ function FilterLink({
       aria-current={active ? 'true' : undefined}
       className={cn(
         'block w-fit max-w-full rounded-sm text-sm leading-6 outline-none focus-visible:ring-3 focus-visible:ring-ring/50',
-        active ? 'font-semibold text-foreground' : 'text-primary hover:underline',
+        active ? 'text-primary font-bold' : 'text-muted-foreground hover:text-primary hover:font-bold',
       )}
     >
       {children}
@@ -371,7 +378,7 @@ function PriceRangeFields({
       <Input
         name="min"
         value={low}
-        onChange={(event) => setLow(event.target.value)}
+        onChange={(event) => setLow(priceDraft(event.target.value))}
         onBlur={leaveField}
         onKeyDown={(event: KeyboardEvent<HTMLInputElement>) => {
           if (event.key !== 'Enter') return;
@@ -379,17 +386,17 @@ function PriceRangeFields({
           const form = event.currentTarget.form;
           if (form) commitForm(form);
         }}
-        inputMode="decimal"
+        inputMode="numeric"
         autoComplete="off"
-        placeholder="Mínimo"
+        placeholder="R$ Mínimo"
         aria-label="Preço mínimo"
         maxLength={12}
-        className="h-9 rounded-md bg-card px-2.5 text-sm"
+        className="h-9 rounded-lg bg-card px-2.5 text-sm"
       />
       <Input
         name="max"
         value={high}
-        onChange={(event) => setHigh(event.target.value)}
+        onChange={(event) => setHigh(priceDraft(event.target.value))}
         onBlur={leaveField}
         onKeyDown={(event: KeyboardEvent<HTMLInputElement>) => {
           if (event.key !== 'Enter') return;
@@ -397,12 +404,12 @@ function PriceRangeFields({
           const form = event.currentTarget.form;
           if (form) commitForm(form);
         }}
-        inputMode="decimal"
+        inputMode="numeric"
         autoComplete="off"
-        placeholder="Máximo"
+        placeholder="R$ Máximo"
         aria-label="Preço máximo"
         maxLength={12}
-        className="h-9 rounded-md bg-card px-2.5 text-sm"
+        className="h-9 rounded-lg bg-card px-2.5 text-sm"
       />
     </form>
   );
