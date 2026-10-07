@@ -479,7 +479,7 @@ function groupLines(lines: ReadyLine[]) {
 }
 
 export function CartView() {
-  const { cart, products, hydrated } = useMarketplace();
+  const { cart, products, hydrated, user } = useMarketplace();
   const lines = resolveCart(cart, products);
   const available = lines.flatMap((line) =>
     line.product ? [{ ...line, product: line.product }] : [],
@@ -927,7 +927,9 @@ export function CartView() {
             ) : (
               <Button asChild size="xl" className="h-12 w-full text-base" tooltip={false}>
                 <Link
-                  href="/checkout"
+                  href={
+                    user ? '/checkout' : `/entrar?next=${encodeURIComponent('/checkout')}`
+                  }
                   onClick={() => setCheckoutProductIds(selected.map((line) => line.product.id))}
                 >
                   Continuar ({units})

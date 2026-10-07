@@ -216,7 +216,7 @@ function AuthSwitch({ href, prompt, label }: { href: string; prompt: string; lab
 export function LoginView() {
   const router = useRouter();
   const params = useSearchParams();
-  const next = safeNextPath(params.get('next'));
+  const next = safeNextPath(params.get('next'), '/');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [errors, setErrors] = useState<Record<string, string>>({});

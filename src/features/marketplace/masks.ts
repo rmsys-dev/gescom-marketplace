@@ -38,7 +38,7 @@ export function nameFromEmail(email: string) {
   return words.replace(/\b\p{L}/gu, (letter) => letter.toLocaleUpperCase('pt-BR'));
 }
 
-export function safeNextPath(value: string | null | undefined) {
-  if (!value || !value.startsWith('/') || value.startsWith('//')) return '/conta';
+export function safeNextPath(value: string | null | undefined, fallback = '/conta') {
+  if (!value || !value.startsWith('/') || value.startsWith('//')) return fallback;
   return value;
 }
