@@ -1,10 +1,11 @@
 'use client';
 
-import { ChevronRight, Heart, LogOut, MapPin, Package, UserRound } from 'lucide-react';
+import { MapPin, Package, UserRound } from 'lucide-react';
 import Link from 'next/link';
 import { useState } from 'react';
 import { z } from 'zod';
 
+import { ACCOUNT_NAV } from '@/features/marketplace/account-nav';
 import {
   controlClass,
   EmptyState,
@@ -18,7 +19,6 @@ import { maskPhone, maskZip, onlyDigits } from '@/features/marketplace/masks';
 import { formatBRL } from '@/features/marketplace/money';
 import {
   ORDER_FLOW,
-  logout,
   removeAddress,
   saveAddress,
   updateProfile,
@@ -35,6 +35,13 @@ import {
 } from '@/shared/components/ui/sheet';
 import { Skeleton } from '@/shared/components/ui/skeleton';
 import { cn } from '@/shared/lib/utils';
+
+function userInitials(name: string) {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return '?';
+  if (parts.length === 1) return parts[0]!.slice(0, 2).toUpperCase();
+  return `${parts[0]![0] ?? ''}${parts[parts.length - 1]![0] ?? ''}`.toUpperCase();
+}
 
 const profileSchema = z.object({
   name: z.string().trim().min(3, 'Informe nome e sobrenome.'),
@@ -60,7 +67,7 @@ export function AccountGate({ children }: { children: React.ReactNode }) {
   const { hydrated, user } = useMarketplace();
   if (!hydrated) {
     return (
-      <div className="space-y-3" aria-hidden>
+      <div className="mx-auto w-full max-w-lg space-y-3 px-4 py-8" aria-hidden>
         <Skeleton className="h-20 w-full rounded-2xl" />
         <Skeleton className="h-14 w-full rounded-2xl" />
         <Skeleton className="h-14 w-full rounded-2xl" />
@@ -69,88 +76,66 @@ export function AccountGate({ children }: { children: React.ReactNode }) {
   }
   if (!user) {
     return (
-      <EmptyState
-        icon={UserRound}
-        title="Entre para continuar"
-        description="A conta fica neste aparelho. Use um e-mail válido e uma senha com 6 caracteres ou mais."
-        action={
-          <Button asChild className="h-12 w-full" tooltip={false}>
-            <Link href="/entrar">Entrar</Link>
-          </Button>
-        }
-      />
+      <div className="mx-auto w-full max-w-lg px-4 py-8">
+        <EmptyState
+          icon={UserRound}
+          title="Entre para continuar"
+          description="A conta fica neste aparelho. Use um e-mail válido e uma senha com 6 caracteres ou mais."
+          action={
+            <Button asChild className="h-12 w-full" tooltip={false}>
+              <Link href="/entrar">Entrar</Link>
+            </Button>
+          }
+        />
+      </div>
     );
   }
   return children;
 }
 
-const MENU = [
-  { href: '/conta/pedidos', label: 'Pedidos', hint: 'Acompanhe o que você comprou', icon: Package },
-  {
-    href: '/conta/favoritos',
-    label: 'Favoritos',
-    hint: 'Produtos salvos neste aparelho',
-    icon: Heart,
-  },
-  {
-    href: '/conta/enderecos',
-    label: 'Endereços',
-    hint: 'Onde os pedidos podem chegar',
-    icon: MapPin,
-  },
-  {
-    href: '/conta/perfil',
-    label: 'Dados pessoais',
-    hint: 'Nome, e-mail e celular',
-    icon: UserRound,
-  },
-] as const;
-
 export function AccountHome() {
   const { user } = useMarketplace();
+  if (!user) return null;
+
   return (
-    <AccountGate>
-      <div className="space-y-6">
-        <header className="flex items-center gap-3">
-          <span className="flex size-14 items-center justify-center rounded-full bg-primary text-lg font-semibold text-primary-foreground">
-            {user?.name.slice(0, 1)}
-          </span>
-          <div>
-            <h1 className="text-xl font-semibold tracking-tight">{user?.name}</h1>
-            <p className="text-sm text-muted-foreground">{user?.email}</p>
-          </div>
-        </header>
-        <ul className="overflow-hidden rounded-2xl bg-card ring-1 ring-foreground/10">
-          {MENU.map((item) => {
+    <div className="space-y-6 md:space-y-8">
+      <header className="flex items-center gap-4">
+        <span
+          className="flex size-14 shrink-0 items-center justify-center rounded-full bg-muted text-base font-semibold tracking-wide text-foreground"
+          aria-hidden
+        >
+          {userInitials(user.name)}
+        </span>
+        <div className="min-w-0">
+          <h1 className="truncate text-xl font-semibold tracking-tight md:text-2xl">{user.name}</h1>
+          <p className="truncate text-sm text-muted-foreground">{user.email}</p>
+        </div>
+      </header>
+
+      <section aria-label="Atalhos da conta">
+        <ul className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+          {ACCOUNT_NAV.map((item) => {
             const Icon = item.icon;
             return (
-              <li key={item.href} className="border-b border-border last:border-b-0">
-                <Link href={item.href} className="flex min-h-16 items-center gap-3 px-4">
-                  <Icon className="size-5 text-primary" aria-hidden />
-                  <span className="min-w-0 flex-1">
-                    <span className="block text-sm font-medium">{item.label}</span>
-                    <span className="block truncate text-xs text-muted-foreground">
+              <li key={item.href}>
+                <Link
+                  href={item.href}
+                  className="flex h-full min-h-30 flex-col gap-3 rounded-2xl bg-card p-5 shadow-card ring-1 ring-foreground/8 transition-colors hover:ring-primary/25"
+                >
+                  <Icon className="size-6 text-foreground" strokeWidth={1.6} aria-hidden />
+                  <span className="space-y-1">
+                    <span className="block text-sm font-semibold tracking-tight">{item.label}</span>
+                    <span className="block text-sm leading-snug text-muted-foreground">
                       {item.hint}
                     </span>
                   </span>
-                  <ChevronRight className="size-4 text-muted-foreground" aria-hidden />
                 </Link>
               </li>
             );
           })}
         </ul>
-        <Button
-          type="button"
-          variant="outline"
-          className="h-12 w-full"
-          tooltip={false}
-          onClick={() => logout()}
-        >
-          <LogOut />
-          Sair
-        </Button>
-      </div>
-    </AccountGate>
+      </section>
+    </div>
   );
 }
 
@@ -158,7 +143,7 @@ export function OrdersView() {
   const { orders } = useMarketplace();
   return (
     <div className="space-y-4">
-      <h1 className="text-2xl font-semibold tracking-tight">Pedidos</h1>
+      <h1 className="hidden text-2xl font-semibold tracking-tight md:block">Pedidos</h1>
       {orders.length === 0 ? (
         <EmptyState
           icon={Package}
@@ -345,50 +330,48 @@ export function AddressesView() {
   const [confirmId, setConfirmId] = useState<string | null>(null);
 
   return (
-    <AccountGate>
-      <div className="space-y-4">
-        <div className="flex items-center justify-between gap-3">
-          <h1 className="text-2xl font-semibold tracking-tight">Endereços</h1>
-          <Button type="button" className="h-11" tooltip={false} onClick={() => setOpen(true)}>
-            Adicionar ao carrinho
-          </Button>
-        </div>
-        {addresses.length === 0 ? (
-          <EmptyState
-            icon={MapPin}
-            title="Nenhum endereço"
-            description="Cadastre um local para usar no checkout."
-          />
-        ) : (
-          <ul className="space-y-3">
-            {addresses.map((address) => (
-              <li key={address.id} className="rounded-2xl bg-card p-4 ring-1 ring-foreground/10">
-                <p className="text-sm font-semibold">{address.label}</p>
-                <p className="mt-1 text-sm">{address.recipient}</p>
-                <p className="text-sm text-muted-foreground">
-                  {address.street}, {address.number} · {address.city}/{address.state}
-                </p>
-                <button
-                  type="button"
-                  className="mt-3 min-h-11 text-sm font-medium text-destructive"
-                  onClick={() => {
-                    if (confirmId === address.id) {
-                      removeAddress(address.id);
-                      setConfirmId(null);
-                      return;
-                    }
-                    setConfirmId(address.id);
-                  }}
-                >
-                  {confirmId === address.id ? 'Confirmar remoção' : 'Remover'}
-                </button>
-              </li>
-            ))}
-          </ul>
-        )}
-        <AddressSheet open={open} onOpenChange={setOpen} />
+    <div className="space-y-4">
+      <div className="flex items-center justify-between gap-3">
+        <h1 className="hidden text-2xl font-semibold tracking-tight md:block">Endereços</h1>
+        <Button type="button" className="h-11" tooltip={false} onClick={() => setOpen(true)}>
+          Adicionar
+        </Button>
       </div>
-    </AccountGate>
+      {addresses.length === 0 ? (
+        <EmptyState
+          icon={MapPin}
+          title="Nenhum endereço"
+          description="Cadastre um local para usar no checkout."
+        />
+      ) : (
+        <ul className="space-y-3">
+          {addresses.map((address) => (
+            <li key={address.id} className="rounded-2xl bg-card p-4 ring-1 ring-foreground/10">
+              <p className="text-sm font-semibold">{address.label}</p>
+              <p className="mt-1 text-sm">{address.recipient}</p>
+              <p className="text-sm text-muted-foreground">
+                {address.street}, {address.number} · {address.city}/{address.state}
+              </p>
+              <button
+                type="button"
+                className="mt-3 min-h-11 text-sm font-medium text-destructive"
+                onClick={() => {
+                  if (confirmId === address.id) {
+                    removeAddress(address.id);
+                    setConfirmId(null);
+                    return;
+                  }
+                  setConfirmId(address.id);
+                }}
+              >
+                {confirmId === address.id ? 'Confirmar remoção' : 'Remover'}
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+      <AddressSheet open={open} onOpenChange={setOpen} />
+    </div>
   );
 }
 
@@ -558,11 +541,7 @@ function AddressSheet({
 }
 
 export function ProfileView() {
-  return (
-    <AccountGate>
-      <ProfileForm />
-    </AccountGate>
-  );
+  return <ProfileForm />;
 }
 
 function ProfileForm() {
@@ -591,7 +570,7 @@ function ProfileForm() {
         setSaved(true);
       }}
     >
-      <h1 className="text-2xl font-semibold tracking-tight">Dados pessoais</h1>
+      <h1 className="hidden text-2xl font-semibold tracking-tight md:block">Dados pessoais</h1>
       <Field label="Nome" htmlFor="profile-name" error={errors.name}>
         <input
           id="profile-name"

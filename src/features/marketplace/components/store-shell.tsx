@@ -268,6 +268,7 @@ export function StoreShell({
   backHref?: string;
 }) {
   const pathname = usePathname();
+  const isAccount = pathname.startsWith('/conta');
   const shellRef = useRef<HTMLDivElement>(null);
   const headerRef = useRef<HTMLElement>(null);
   const [filtersOpen, setFiltersOpen] = useState(false);
@@ -335,7 +336,13 @@ export function StoreShell({
           <CategoryBar />
         </>
       ) : null}
-      <main id="conteudo" className="mx-auto w-full flex-1 px-4 pt-4 pb-8 md:pb-12">
+      <main
+        id="conteudo"
+        className={cn(
+          'mx-auto w-full flex-1',
+          isAccount ? 'flex flex-col px-0 pt-0 pb-0' : 'px-4 pt-4 pb-8 md:pb-12',
+        )}
+      >
         {children}
       </main>
       <SiteFooter className={footerReserveClass(pathname, mode === 'browse')} />
