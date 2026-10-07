@@ -57,7 +57,7 @@ export function CatalogView({
       category: categorySlug,
       favoritesOnly,
       favoriteIds: favorites,
-      ...filtersToCatalogQuery(filters),
+      ...(favoritesOnly ? {} : filtersToCatalogQuery(filters)),
     }),
     [q, categorySlug, favoritesOnly, favorites, filters],
   );
@@ -73,153 +73,156 @@ export function CatalogView({
     router.replace(query ? `${pathname}?${query}` : pathname, { scroll: false });
   }
 
-  const activeFilters = countActiveFilters(filters);
+  const activeFilters = favoritesOnly ? 0 : countActiveFilters(filters);
 
   const term = formatSearchTerm(q);
   const searching = pathname === '/busca' && term.length > 0;
   const categories = searching ? relatedCategories(result) : [];
   const resultLabel = `${result.length} ${result.length === 1 ? 'resultado' : 'resultados'}`;
 
-  const pending = favoritesOnly && !hydrated;
+  const listing = (
+    <div className="space-y-4">
+      <header className="space-y-1">
+        {searching ? (
+          <>
+            <h1 className="flex flex-wrap items-baseline gap-x-3 text-2xl font-semibold tracking-tight">
+              <span>{term}</span>
+              <span className="text-sm font-normal text-muted-foreground" aria-live="polite">
+                {resultLabel}
+              </span>
+            </h1>
+            {categories.length > 0 ? (
+              <Breadcrumb aria-label="Categorias relacionadas">
+                <BreadcrumbList>
+                  <BreadcrumbItem>
+                    <BreadcrumbLink asChild>
+                      <Link href="/">Início</Link>
+                    </BreadcrumbLink>
+                  </BreadcrumbItem>
+                  {categories.map((category, index) => (
+                    <Fragment key={category.slug}>
+                      <BreadcrumbSeparator>{index === 0 ? undefined : '·'}</BreadcrumbSeparator>
+                      <BreadcrumbItem>
+                        <BreadcrumbLink asChild>
+                          <Link href={`/categoria/${category.slug}`}>{category.name}</Link>
+                        </BreadcrumbLink>
+                      </BreadcrumbItem>
+                    </Fragment>
+                  ))}
+                </BreadcrumbList>
+              </Breadcrumb>
+            ) : null}
+          </>
+        ) : (
+          <>
+            <h1
+              className={
+                favoritesOnly
+                  ? 'hidden text-2xl font-semibold tracking-tight md:block'
+                  : 'text-2xl font-semibold tracking-tight'
+              }
+            >
+              {title}
+            </h1>
+            {description ? (
+              <p
+                className={
+                  favoritesOnly
+                    ? 'hidden text-sm text-muted-foreground md:block'
+                    : 'text-sm text-muted-foreground'
+                }
+              >
+                {description}
+              </p>
+            ) : null}
+          </>
+        )}
+      </header>
+
+      {showRecent && !q && recentQueries.length > 0 ? (
+        <div className="space-y-2">
+          <SectionHeader title="Buscas recentes" />
+          <div
+            className="scrollbar-none -mx-4 flex gap-2 overflow-x-auto px-4 md:mx-0 md:px-0"
+            data-lenis-prevent-touch
+          >
+            {recentQueries.map((query) => (
+              <Link
+                key={query}
+                href={`/busca?q=${encodeURIComponent(query)}`}
+                className="inline-flex h-10 shrink-0 items-center rounded-full bg-secondary px-3 text-sm font-medium text-secondary-foreground"
+              >
+                {formatSearchTerm(query)}
+              </Link>
+            ))}
+          </div>
+        </div>
+      ) : null}
+
+      {searching ? null : (
+        <p className="text-sm text-muted-foreground md:hidden" aria-live="polite">
+          {hydrated || !favoritesOnly
+            ? `${result.length} ${result.length === 1 ? 'produto' : 'produtos'}`
+            : 'Carregando produtos'}
+        </p>
+      )}
+
+      {result.length === 0 ? (
+        <EmptyState
+          icon={Search}
+          title={favoritesOnly ? 'Nenhum favorito ainda' : 'Nada encontrado'}
+          description={
+            favoritesOnly
+              ? 'Toque no coração de um produto para guardar aqui neste aparelho.'
+              : 'Tente outro termo ou limpe os filtros para ver o catálogo de novo.'
+          }
+          action={
+            activeFilters || q ? (
+              <Button
+                type="button"
+                className="h-12 w-full"
+                tooltip={false}
+                onClick={() =>
+                  write({
+                    q: null,
+                    preco: null,
+                    min: null,
+                    max: null,
+                    condicao: null,
+                    frete: null,
+                    ordem: null,
+                    oferta: null,
+                  })
+                }
+              >
+                Limpar busca e filtros
+              </Button>
+            ) : favoritesOnly ? (
+              <Button asChild className="h-12 w-full" tooltip={false}>
+                <Link href="/busca">Explorar produtos</Link>
+              </Button>
+            ) : null
+          }
+        />
+      ) : (
+        <ProductGrid products={result} fit={favoritesOnly ? 'page' : 'aside'} />
+      )}
+    </div>
+  );
+
+  if (favoritesOnly) return listing;
 
   return (
     <ListingFrame
       sidebar={
         <FilterSidebar
-          products={pending ? [] : products}
-          heading={categorySlug ? title : favoritesOnly ? 'Favoritos' : 'Todas'}
+          products={products}
+          heading={categorySlug ? title : 'Todas'}
           scope={{ q, category: categorySlug, favoritesOnly, favoriteIds: favorites }}
-          countLabel={pending ? 'Carregando produtos' : undefined}
         />
       }
     >
-      <div className="space-y-4">
-        <header className="space-y-1">
-          {searching ? (
-            <>
-              <h1 className="flex flex-wrap items-baseline gap-x-3 text-2xl font-semibold tracking-tight">
-                <span>{term}</span>
-                <span className="text-sm font-normal text-muted-foreground" aria-live="polite">
-                  {resultLabel}
-                </span>
-              </h1>
-              {categories.length > 0 ? (
-                <Breadcrumb aria-label="Categorias relacionadas">
-                  <BreadcrumbList>
-                    <BreadcrumbItem>
-                      <BreadcrumbLink asChild>
-                        <Link href="/">Início</Link>
-                      </BreadcrumbLink>
-                    </BreadcrumbItem>
-                    {categories.map((category, index) => (
-                      <Fragment key={category.slug}>
-                        <BreadcrumbSeparator>{index === 0 ? undefined : '·'}</BreadcrumbSeparator>
-                        <BreadcrumbItem>
-                          <BreadcrumbLink asChild>
-                            <Link href={`/categoria/${category.slug}`}>{category.name}</Link>
-                          </BreadcrumbLink>
-                        </BreadcrumbItem>
-                      </Fragment>
-                    ))}
-                  </BreadcrumbList>
-                </Breadcrumb>
-              ) : null}
-            </>
-          ) : (
-            <>
-              <h1
-                className={
-                  favoritesOnly
-                    ? 'hidden text-2xl font-semibold tracking-tight md:block'
-                    : 'text-2xl font-semibold tracking-tight'
-                }
-              >
-                {title}
-              </h1>
-              {description ? (
-                <p
-                  className={
-                    favoritesOnly
-                      ? 'hidden text-sm text-muted-foreground md:block'
-                      : 'text-sm text-muted-foreground'
-                  }
-                >
-                  {description}
-                </p>
-              ) : null}
-            </>
-          )}
-        </header>
-
-        {showRecent && !q && recentQueries.length > 0 ? (
-          <div className="space-y-2">
-            <SectionHeader title="Buscas recentes" />
-            <div
-              className="scrollbar-none -mx-4 flex gap-2 overflow-x-auto px-4 md:mx-0 md:px-0"
-              data-lenis-prevent-touch
-            >
-              {recentQueries.map((query) => (
-                <Link
-                  key={query}
-                  href={`/busca?q=${encodeURIComponent(query)}`}
-                  className="inline-flex h-10 shrink-0 items-center rounded-full bg-secondary px-3 text-sm font-medium text-secondary-foreground"
-                >
-                  {formatSearchTerm(query)}
-                </Link>
-              ))}
-            </div>
-          </div>
-        ) : null}
-
-        {searching ? null : (
-          <p className="text-sm text-muted-foreground md:hidden" aria-live="polite">
-            {hydrated || !favoritesOnly
-              ? `${result.length} ${result.length === 1 ? 'produto' : 'produtos'}`
-              : 'Carregando produtos'}
-          </p>
-        )}
-
-        {result.length === 0 ? (
-          <EmptyState
-            icon={Search}
-            title={favoritesOnly ? 'Nenhum favorito ainda' : 'Nada encontrado'}
-            description={
-              favoritesOnly
-                ? 'Toque no coração de um produto para guardar aqui neste aparelho.'
-                : 'Tente outro termo ou limpe os filtros para ver o catálogo de novo.'
-            }
-            action={
-              activeFilters || q ? (
-                <Button
-                  type="button"
-                  className="h-12 w-full"
-                  tooltip={false}
-                  onClick={() =>
-                    write({
-                      q: null,
-                      preco: null,
-                      min: null,
-                      max: null,
-                      condicao: null,
-                      frete: null,
-                      ordem: null,
-                      oferta: null,
-                    })
-                  }
-                >
-                  Limpar busca e filtros
-                </Button>
-              ) : favoritesOnly ? (
-                <Button asChild className="h-12 w-full" tooltip={false}>
-                  <Link href="/busca">Explorar produtos</Link>
-                </Button>
-              ) : null
-            }
-          />
-        ) : (
-          <ProductGrid products={result} fit="aside" />
-        )}
-      </div>
+      {listing}
     </ListingFrame>
   );
 }

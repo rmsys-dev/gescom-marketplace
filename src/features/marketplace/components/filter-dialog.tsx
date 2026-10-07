@@ -24,9 +24,7 @@ import {
 import { cn } from '@/shared/lib/utils';
 
 function isCatalogPath(pathname: string) {
-  return (
-    pathname === '/busca' || pathname.startsWith('/categoria/') || pathname === '/conta/favoritos'
-  );
+  return pathname === '/busca' || pathname.startsWith('/categoria/');
 }
 
 export function FilterDialog({
