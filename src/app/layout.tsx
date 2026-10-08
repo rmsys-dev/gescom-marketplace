@@ -11,7 +11,7 @@ import { Toaster } from 'sonner';
 export const metadata: Metadata = {
   title: {
     default: 'Gescom Marketplace',
-    template: '%s · Gescom',
+    template: '%s | Gescom',
   },
   description:
     'Loja para comprar produtos. A vitrine e os pedidos ficam neste aparelho.',
