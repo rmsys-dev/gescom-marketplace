@@ -190,24 +190,84 @@ const PAGES: Record<string, InstitutionalPage> = {
   },
   acessibilidade: {
     title: 'Acessibilidade',
-    description: 'Como a loja trata navegação, contraste e rótulos.',
+    description:
+      'Como a Gescom Marketplace trata navegação por teclado, contraste, rótulos e preferências de movimento.',
+    presentation: 'brand',
+    eyebrow: 'Inclusão · Gescom Marketplace',
     blocks: [
       {
+        kind: 'lead',
+        text: 'A vitrine deve ser usável com teclado, leitores de tela e preferências do sistema. Esta página resume o que a loja já oferece e como reportar barreiras que impeçam concluir uma tarefa.',
+      },
+      {
+        kind: 'facts',
+        items: [
+          { label: 'Teclado', value: 'Navegação completa' },
+          { label: 'Atalho inicial', value: 'Pular ao conteúdo' },
+          { label: 'Contraste', value: 'Paleta da loja' },
+          { label: 'Movimento', value: 'Respeita preferência do SO' },
+        ],
+      },
+      {
+        kind: 'h2',
+        id: 'navegacao',
+        text: 'Navegação e foco',
+      },
+      {
         kind: 'p',
-        text: 'A vitrine pode ser percorrida pelo teclado. O primeiro foco da página oferece um atalho para pular ao conteúdo.',
+        text: 'A loja pode ser percorrida pelo teclado. O primeiro foco da página oferece um atalho para pular ao conteúdo principal, evitando repetir cabeçalho e busca a cada mudança de tela.',
       },
       {
         kind: 'list',
         items: [
-          'Botões, links e campos têm nome acessível.',
-          'O texto usa contraste definido pela paleta da loja.',
-          'O movimento da interface respeita a preferência de reduzir animação do sistema.',
-          'O rodapé repete os caminhos de conta, pagamento, frete e ajuda.',
+          'Botões, links e campos possuem nome acessível para leitores de tela.',
+          'O foco permanece visível ao avançar com Tab entre controles interativos.',
+          'O rodapé repete caminhos de conta, pagamento, frete, ajuda e páginas legais.',
+          'Formulários do checkout e da conta usam rótulos associados aos respectivos campos.',
         ],
       },
       {
+        kind: 'h2',
+        id: 'visual-movimento',
+        text: 'Contraste e movimento',
+      },
+      {
+        kind: 'highlights',
+        items: [
+          {
+            title: 'Contraste',
+            text: 'Textos e controles seguem a paleta Gescom, com contraste pensado para leitura em temas claro e escuro quando disponíveis.',
+          },
+          {
+            title: 'Reduzir animação',
+            text: 'Quando o sistema pede menos movimento, a interface reduz ou desliga animações decorativas sem impedir o uso das funções.',
+          },
+          {
+            title: 'Hierarquia',
+            text: 'Títulos, listas e blocos de destaque organizam a informação em seções claras, inclusive nas páginas institucionais.',
+          },
+          {
+            title: 'Feedback',
+            text: 'Estados de erro, sucesso e carregamento são comunicados por texto, não só por cor ou ícone isolado.',
+          },
+        ],
+      },
+      {
+        kind: 'h2',
+        id: 'reportar',
+        text: 'Como reportar uma barreira',
+      },
+      {
         kind: 'p',
-        text: 'Se algum fluxo impedir a conclusão de uma tarefa, use a página de ajuda e descreva a página e o que você tentou fazer.',
+        text: 'Se algum fluxo impedir a conclusão de uma tarefa — compra, conta, busca ou leitura destas páginas — use a Central de Ajuda e descreva a página, o dispositivo, o navegador e o que você tentou fazer.',
+      },
+      {
+        kind: 'list',
+        items: [
+          'Informe se usa teclado, leitor de tela, lupa ou preferência de reduzir animação.',
+          'Indique o passo em que a tarefa parou e, se possível, o código do pedido.',
+          'Dúvidas gerais de compra também podem ser tratadas na Central de Ajuda.',
+        ],
       },
     ],
   },
@@ -742,43 +802,258 @@ const PAGES: Record<string, InstitutionalPage> = {
   },
   condicoes: {
     title: 'Condições de Uso',
-    description: 'O que esta vitrine é e o que ela não contrata.',
+    description:
+      'Condições de uso do Gescom Marketplace: escopo da vitrine, pedidos locais e o que a loja não contrata.',
+    presentation: 'brand',
+    eyebrow: 'Uso · Gescom Marketplace',
     blocks: [
       {
-        kind: 'p',
-        text: 'O Gescom Marketplace é a frente de loja do sistema Gescom, da RMSys. Usar a vitrine não gera contrato de venda, nota fiscal nem obrigação de entrega.',
+        kind: 'lead',
+        text: 'O Gescom Marketplace é a frente de loja do sistema Gescom, da RMSys. Estas condições explicam o que a vitrine permite fazer e o que ela não constitui juridicamente.',
+      },
+      {
+        kind: 'facts',
+        items: [
+          { label: 'Titular', value: COMPANY.owner },
+          { label: 'Vitrine', value: COMPANY.marketplace },
+          { label: 'Pedido', value: 'Registro local' },
+          { label: 'Cobrança', value: 'Não processada aqui' },
+        ],
+      },
+      {
+        kind: 'h2',
+        id: 'aceitacao',
+        text: 'Aceitação e escopo',
       },
       {
         kind: 'p',
-        text: 'Preços, estoque e prazos exibidos servem para percorrer a compra neste aparelho. Confirmar um pedido grava o registro localmente e não reserva produto em um centro de distribuição.',
+        text: 'Ao navegar, criar conta local ou confirmar um pedido nesta vitrine, você declara ter lido estas condições e as informações corporativas da RMSys. O uso autorizado do software permanece restrito à empresa e às pessoas ou organizações por ela permitidas.',
+      },
+      {
+        kind: 'list',
+        items: [
+          'A vitrine demonstra a experiência de compra do ecossistema Gescom: catálogo, conta, carrinho e pedidos neste aparelho.',
+          'Usar a loja não gera, por si só, contrato de venda com obrigação de entrega física nem emissão de nota fiscal.',
+          'Preços, estoque e prazos exibidos servem para percorrer a jornada de compra na interface.',
+          'Confirmar um pedido grava o registro localmente e não reserva produto em um centro de distribuição.',
+        ],
+      },
+      {
+        kind: 'h2',
+        id: 'o-que-nao-contrata',
+        text: 'O que esta vitrine não contrata',
+      },
+      {
+        kind: 'highlights',
+        items: [
+          {
+            title: 'Sem cobrança bancária',
+            text: 'Pix, cartão e boleto no checkout registram a escolha do meio. Não há captura de pagamento nem liquidação financeira nesta vitrine.',
+          },
+          {
+            title: 'Sem obrigação de entrega',
+            text: 'Frete e prazos estimados ilustram a jornada. Não há compromisso de envio físico a partir deste ambiente demonstrativo.',
+          },
+          {
+            title: 'Sem cadastro central',
+            text: 'Conta, endereços e histórico ficam no navegador deste aparelho. Não há servidor de pedidos para recuperar dados apagados.',
+          },
+          {
+            title: 'Propriedade intelectual',
+            text: 'Marca, interface e materiais associados pertencem à RMSys. É proibida cópia, redistribuição ou uso fora do escopo autorizado.',
+          },
+        ],
+      },
+      {
+        kind: 'h2',
+        id: 'conduta',
+        text: 'Conduta esperada',
+      },
+      {
+        kind: 'list',
+        items: [
+          'Não tentar burlar controles da interface, explorar falhas ou acessar áreas não destinadas ao uso da loja.',
+          'Não utilizar a vitrine para fins ilícitos, ofensivos ou que violem direitos de terceiros.',
+          'Não reproduzir, engenheirar de forma reversa ou sublicenciar o software sem autorização da RMSys.',
+          'Em caso de dúvida sobre permissões ou acesso, consulte as informações corporativas ou a Central de Ajuda.',
+        ],
+      },
+      {
+        kind: 'p',
+        text: 'Para privacidade dos dados no aparelho, cookies e segurança da compra, utilize as páginas correspondentes no rodapé.',
       },
     ],
   },
   privacidade: {
     title: 'Notificação de Privacidade',
-    description: 'Onde ficam conta, carrinho, endereços e pedidos.',
+    description:
+      'Como a Gescom Marketplace trata conta, carrinho, endereços e pedidos guardados neste navegador.',
+    presentation: 'brand',
+    eyebrow: 'Dados · Gescom Marketplace',
     blocks: [
       {
-        kind: 'p',
-        text: 'Conta, carrinho, favoritos, endereços e pedidos ficam no armazenamento deste navegador. A loja não envia esses dados a um servidor.',
+        kind: 'lead',
+        text: 'Conta, carrinho, favoritos, endereços e pedidos ficam no armazenamento deste navegador. A loja não envia esses dados a um servidor externo para cadastro central.',
+      },
+      {
+        kind: 'facts',
+        items: [
+          { label: 'Onde ficam', value: 'Neste navegador' },
+          { label: 'Envio a servidor', value: 'Não realizado' },
+          { label: 'Recuperação', value: 'Sem cadastro central' },
+          { label: 'Controle', value: 'Você no aparelho' },
+        ],
+      },
+      {
+        kind: 'h2',
+        id: 'o-que-guardamos',
+        text: 'O que fica no aparelho',
       },
       {
         kind: 'p',
-        text: 'Limpar os dados do navegador apaga a conta local e o histórico. Não há cadastro central para recuperar essa informação.',
+        text: 'A vitrine usa o armazenamento local do navegador para manter a jornada de compra neste dispositivo. Isso inclui dados necessários para repetir o checkout e acompanhar pedidos registrados aqui.',
+      },
+      {
+        kind: 'list',
+        items: [
+          'Identificação e preferências da conta local.',
+          'Itens do carrinho e lista de favoritos.',
+          'Endereços salvos para preenchimento do checkout.',
+          'Histórico e detalhe dos pedidos confirmados nesta loja.',
+        ],
+      },
+      {
+        kind: 'h2',
+        id: 'o-que-nao-fazemos',
+        text: 'O que não fazemos nesta vitrine',
+      },
+      {
+        kind: 'highlights',
+        items: [
+          {
+            title: 'Sem nuvem de conta',
+            text: 'Não há sincronização entre aparelhos nem recuperação de senha por e-mail a partir de um cadastro central.',
+          },
+          {
+            title: 'Sem envio de pedidos',
+            text: 'Confirmar a compra grava o registro localmente. Os dados do pedido não são transmitidos a um backend de e-commerce nesta vitrine.',
+          },
+          {
+            title: 'Sem marketing de terceiros',
+            text: 'Não compartilhamos o histórico local com redes de anúncio ou plataformas de medição de audiência.',
+          },
+          {
+            title: 'Pagamento',
+            text: 'Dados digitados no checkout são tratados no fluxo da página. Consulte também Segurança e Cookies para o contexto completo.',
+          },
+        ],
+      },
+      {
+        kind: 'h2',
+        id: 'controle-exclusao',
+        text: 'Controle e exclusão',
+      },
+      {
+        kind: 'p',
+        text: 'Limpar os dados do navegador (ou o armazenamento do site) apaga a conta local, o carrinho, os favoritos, os endereços e o histórico de pedidos. Não há cópia central para restaurar essa informação.',
+      },
+      {
+        kind: 'list',
+        items: [
+          'Você pode editar endereços e preferências pela área da conta enquanto os dados existirem neste aparelho.',
+          'Trocar de navegador ou de dispositivo inicia uma experiência sem o histórico anterior.',
+          'Em redes compartilhadas, prefira sair da conta e evitar deixar o aparelho desbloqueado após o uso.',
+        ],
+      },
+      {
+        kind: 'p',
+        text: 'Para cookies e armazenamento complementar, veja a página de Cookies. Em suspeita de uso indevido dos seus dados de login, consulte Segurança e a Central de Ajuda.',
       },
     ],
   },
   cookies: {
     title: 'Cookies',
-    description: 'O que a vitrine guarda no navegador.',
+    description:
+      'O que a Gescom Marketplace guarda no navegador: ausência de cookies de publicidade e uso de armazenamento local.',
+    presentation: 'brand',
+    eyebrow: 'Navegador · Gescom Marketplace',
     blocks: [
       {
-        kind: 'p',
-        text: 'A loja não usa cookies de publicidade nem de medição de audiência. Preferências da compra usam o armazenamento local do próprio aparelho.',
+        kind: 'lead',
+        text: 'A loja não usa cookies de publicidade nem de medição de audiência. Preferências e dados da compra usam o armazenamento local do próprio aparelho.',
+      },
+      {
+        kind: 'facts',
+        items: [
+          { label: 'Publicidade', value: 'Sem cookies de anúncio' },
+          { label: 'Audiência', value: 'Sem medição de terceiros' },
+          { label: 'Preferências', value: 'Armazenamento local' },
+          { label: 'Controle', value: 'Dados do navegador' },
+        ],
+      },
+      {
+        kind: 'h2',
+        id: 'o-que-usamos',
+        text: 'O que usamos',
       },
       {
         kind: 'p',
-        text: 'Não há anúncio baseado em interesse para configurar ou recusar nesta vitrine.',
+        text: 'Para manter conta, carrinho, favoritos, endereços e pedidos entre visitas neste mesmo navegador, a vitrine grava informações no armazenamento local do aparelho — não em redes de anúncio.',
+      },
+      {
+        kind: 'list',
+        items: [
+          'Dados da sessão de compra e da conta local neste dispositivo.',
+          'Preferências necessárias para repetir o fluxo de checkout com menos retrabalho.',
+          'Registros de pedidos confirmados para consulta em Seus pedidos.',
+        ],
+      },
+      {
+        kind: 'h2',
+        id: 'o-que-nao-usamos',
+        text: 'O que não usamos',
+      },
+      {
+        kind: 'highlights',
+        items: [
+          {
+            title: 'Cookies de publicidade',
+            text: 'Não há anúncio baseado em interesse para configurar, aceitar ou recusar nesta vitrine.',
+          },
+          {
+            title: 'Medição de audiência',
+            text: 'Não integramos pixels ou scripts de analytics de terceiros para perfilar a navegação.',
+          },
+          {
+            title: 'Remarketing',
+            text: 'O histórico local não alimenta campanhas externas nem listas de remarketing.',
+          },
+          {
+            title: 'Cookies de terceiros',
+            text: 'A experiência depende do próprio site e do armazenamento do navegador, não de redes publicitárias.',
+          },
+        ],
+      },
+      {
+        kind: 'h2',
+        id: 'como-gerenciar',
+        text: 'Como gerenciar',
+      },
+      {
+        kind: 'p',
+        text: 'Você controla esses dados pelas configurações do navegador. Limpar cookies e dados do site remove a conta local e o histórico da loja neste aparelho.',
+      },
+      {
+        kind: 'list',
+        items: [
+          'Use as ferramentas do navegador para apagar dados de sites ou bloquear armazenamento, ciente de que a loja deixará de lembrar pedidos e preferências.',
+          'Em aparelhos compartilhados, limpe os dados ao terminar ou utilize um perfil/navegação privada conforme sua necessidade.',
+          'Detalhes sobre o que a conta guarda estão na Notificação de Privacidade.',
+        ],
+      },
+      {
+        kind: 'p',
+        text: 'Para titularidade e uso autorizado do software, consulte Informações corporativas e Condições de Uso no rodapé.',
       },
     ],
   },
