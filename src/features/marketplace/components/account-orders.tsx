@@ -151,7 +151,7 @@ export function OrdersView() {
               align="start"
               className="min-w-(--radix-select-trigger-width)"
             >
-              <SelectItem value="todas">Categoria</SelectItem>
+              <SelectItem value="todas">Todas as categorias</SelectItem>
               {CATEGORIES.map((item) => (
                 <SelectItem key={item.slug} value={item.slug}>
                   {item.name}
@@ -175,7 +175,7 @@ export function OrdersView() {
               align="end"
               className="min-w-(--radix-select-trigger-width)"
             >
-              <SelectItem value="todas">Data</SelectItem>
+              <SelectItem value="todas">Sempre</SelectItem>
               <SelectItem value="30d">Últimos 30 dias</SelectItem>
               <SelectItem value="6m">Últimos 6 meses</SelectItem>
               <SelectItem value="ano">Este ano</SelectItem>
@@ -245,7 +245,6 @@ export function OrdersView() {
 function OrderPurchaseCard({ order }: { order: Order }) {
   const cover = order.items[0];
   if (!cover) return null;
-  const product = getProductById(cover.productId);
 
   return (
     <article className="overflow-hidden rounded-2xl bg-card shadow-card ring-1 ring-foreground/8">
@@ -274,17 +273,6 @@ function OrderPurchaseCard({ order }: { order: Order }) {
             </p>
           </div>
         </div>
-
-        {product ? (
-          <div className="hidden items-center justify-center border-l border-border pl-5 lg:flex">
-            <Link
-              href={`/produto/${product.slug}`}
-              className="text-sm font-medium text-primary hover:underline"
-            >
-              Ver produto
-            </Link>
-          </div>
-        ) : null}
 
         <div className="flex shrink-0 flex-col gap-2 sm:w-44 sm:justify-center">
           <Button asChild className="h-11 w-full" tooltip={false}>
