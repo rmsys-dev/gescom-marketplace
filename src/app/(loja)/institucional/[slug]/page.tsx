@@ -22,5 +22,13 @@ export default async function InstitutionalPage({ params }: PageProps) {
   const page = getInstitutionalPage(slug);
   if (!page) notFound();
 
-  return <InstitutionalView title={page.title} blocks={page.blocks} />;
+  return (
+    <InstitutionalView
+      title={page.title}
+      blocks={page.blocks}
+      presentation={page.presentation}
+      eyebrow={page.eyebrow}
+      demoNotice={page.demoNotice}
+    />
+  );
 }

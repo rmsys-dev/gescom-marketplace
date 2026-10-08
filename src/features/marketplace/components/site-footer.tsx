@@ -4,6 +4,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 
 import { CONTACT_HREF, FOOTER_COLUMNS, LEGAL_LINKS } from '@/features/marketplace/footer-links';
+import { COMPANY } from '@/features/marketplace/institutional';
 import { cn } from '@/shared/lib/utils';
 
 const footerLinkClass =
@@ -74,8 +75,12 @@ export function SiteFooter({ className }: { className?: string }) {
             </span>
           ))}
         </nav>
-        <p>© {year} RMSys. Todos os direitos reservados.</p>
-        <p className="my-4">Gescom | CNPJ 12.345.678/0001-00</p>
+        <p>
+          © {year} {COMPANY.owner}. Todos os direitos reservados.
+        </p>
+        <p className="my-4">
+          {COMPANY.product} | CNPJ {COMPANY.cnpj}
+        </p>
         <p>
           <Link href={CONTACT_HREF} className={legalLinkClass}>
             Fale conosco
