@@ -7,6 +7,7 @@ export async function GET() {
     return jsonOk({
       products: catalog.products,
       categories: catalog.categories,
+      subcategories: catalog.subcategories,
       message: catalog.message,
     });
   } catch (error) {

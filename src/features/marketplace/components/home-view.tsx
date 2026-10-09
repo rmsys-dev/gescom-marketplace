@@ -6,7 +6,13 @@ import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { useEffect, useMemo, useRef, useState } from 'react';
 
-import { countInCategory, filterCatalog, isOnSale, paginate } from '@/features/marketplace/catalog';
+import {
+  countInCategory,
+  countInSubcategory,
+  filterCatalog,
+  isOnSale,
+  paginate,
+} from '@/features/marketplace/catalog';
 import { EmptyState, SectionHeader } from '@/features/marketplace/components/bits';
 import { CATEGORY_ICONS } from '@/features/marketplace/components/category-bar';
 import { FilterSidebar, ListingFrame } from '@/features/marketplace/components/filter-sidebar';
@@ -158,6 +164,7 @@ export function HomeView() {
   const offers = available
     .filter((product) => isOnSale(product) || product.featured)
     .slice(0, 4);
+  const freeShipping = available.filter((product) => product.freeShipping).slice(0, 4);
   const rated = [...available]
     .sort((a, b) => b.rating - a.rating || Number(b.featured) - Number(a.featured))
     .slice(0, 4);
@@ -234,6 +241,13 @@ export function HomeView() {
                 </section>
               ) : null}
 
+              {freeShipping.length > 0 ? (
+                <section className="space-y-3">
+                  <SectionHeader title="Frete grátis" href="/busca?frete=gratis" />
+                  <ProductGrid products={freeShipping} fit="aside" />
+                </section>
+              ) : null}
+
               {rated.some((product) => product.rating > 0) ? (
                 <section className="space-y-3">
                   <SectionHeader title="Bem avaliados" href="/busca?ordem=avaliacao" />
@@ -307,6 +321,58 @@ export function CategoriesView() {
                     <span className="block font-medium">{category.name}</span>
                     <span className="text-xs text-muted-foreground">
                       {countInCategory(category.slug, products)} produtos
+                    </span>
+                  </span>
+                </Link>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </div>
+  );
+}
+
+export function SubcategoriesView() {
+  const { products, subcategories, catalogReady } = useMarketplace();
+
+  if (!catalogReady) {
+    return (
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-4" aria-busy>
+        {Array.from({ length: 6 }, (_, index) => (
+          <Skeleton key={index} className="min-h-32 rounded-2xl" />
+        ))}
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      <header className="space-y-1">
+        <h1 className="text-2xl font-semibold tracking-tight">Sub-categorias</h1>
+        <p className="text-sm text-muted-foreground">Escolha um subgrupo para ver os anúncios.</p>
+      </header>
+      {subcategories.length === 0 ? (
+        <EmptyState
+          icon={Search}
+          title="Nenhuma sub-categoria"
+          description="Publique produtos com subgrupo no ERP para listá-los aqui."
+        />
+      ) : (
+        <ul className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6">
+          {subcategories.map((subcategory) => {
+            const Icon = CATEGORY_ICONS[subcategory.slug] ?? Sparkles;
+            return (
+              <li key={subcategory.slug}>
+                <Link
+                  href={`/subcategoria/${subcategory.slug}`}
+                  className="flex min-h-32 flex-col justify-between rounded-2xl bg-card p-4 ring-1 ring-foreground/10"
+                >
+                  <Icon className="size-6 text-primary" aria-hidden />
+                  <span>
+                    <span className="block font-medium">{subcategory.name}</span>
+                    <span className="text-xs text-muted-foreground">
+                      {countInSubcategory(subcategory.slug, products)} produtos
                     </span>
                   </span>
                 </Link>

@@ -17,8 +17,8 @@ const PROMOS: {
   {
     href: '/busca?frete=gratis',
     kicker: 'Frete grátis',
-    title: 'Em compras a partir de R$ 199',
-    note: 'Em todo o catálogo',
+    title: 'Produtos com frete grátis',
+    note: 'Seleção com oferta de entrega sem custo',
     icon: Truck,
     panel: 'bg-primary',
   },

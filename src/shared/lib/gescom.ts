@@ -85,10 +85,7 @@ export function cepLookupPath(cepNumber: string) {
   return `/api/v1/addresses/ceps/lookup/${digits}`;
 }
 
-export async function gescom<T>(
-  path: string,
-  init?: RequestInit,
-): Promise<GescomResult<T>> {
+export async function gescom<T>(path: string, init?: RequestInit): Promise<GescomResult<T>> {
   assertConfig();
 
   const controller = new AbortController();
@@ -133,9 +130,13 @@ export async function gescom<T>(
   } catch (error) {
     if (error instanceof GescomError) throw error;
     if (error instanceof Error && error.name === 'AbortError') {
-      throw new GescomError(504, 'TIMEOUT', 'A API demorou demais para responder.');
+      throw new GescomError(
+        504,
+        'TIMEOUT',
+        'Tempo de resposta excedido. Entre em contato com o suporte.',
+      );
     }
-    throw new GescomError(502, 'NETWORK_ERROR', 'Não foi possível falar com a API.');
+    throw new GescomError(502, 'NETWORK_ERROR', 'Erro de conexão. Entre em contato com o suporte.');
   } finally {
     clearTimeout(timer);
   }

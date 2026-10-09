@@ -52,6 +52,13 @@ export function categoryFromGroup(group: StoreNamedRef | null | undefined): Cate
   };
 }
 
+/** Subgrupo do ERP → sub-categoria na loja (mesmo formato de categoria). */
+export function subcategoryFromSubgroup(
+  subgroup: StoreNamedRef | null | undefined,
+): Category | null {
+  return categoryFromGroup(subgroup);
+}
+
 function summarize(item: StoreProductListItem) {
   const parts = [item.brand?.name, item.subgroup?.name, item.group?.name].filter(Boolean);
   return parts[0] ? String(parts[0]) : 'Produto da loja';
@@ -118,7 +125,9 @@ export function mapStoreProductListItem(item: StoreProductListItem): Product {
   const promo = decimalToCents(item.promotionalPrice ?? item.promotion?.price);
   const onPromo = promo > 0 && promo < listPrice;
   const category = categoryFromGroup(item.group);
-  const images = resolveProductImages(item.photoUrl);
+  const subcategory = subcategoryFromSubgroup(item.subgroup);
+  // Capa: photos[0] ?? photoUrl (photos já vem montada pela API).
+  const images = resolveProductImages(item.photos, item.photoUrl);
 
   return {
     id: item.id,
@@ -129,12 +138,13 @@ export function mapStoreProductListItem(item: StoreProductListItem): Product {
     price: onPromo ? promo : listPrice,
     compareAtPrice: onPromo ? listPrice : null,
     categorySlug: category?.slug ?? 'outros',
+    subcategorySlug: subcategory?.slug ?? null,
     images,
     rating: 0,
     reviewCount: 0,
     stock: parseStock(item.stockBalance),
     condition: 'novo',
-    freeShipping: false,
+    freeShipping: Boolean(item.freeShipping),
     specs: [],
     featured: Boolean(item.featured),
   };
@@ -142,9 +152,8 @@ export function mapStoreProductListItem(item: StoreProductListItem): Product {
 
 export function mapStoreProductDetail(item: StoreProductDetail): Product {
   const base = mapStoreProductListItem(item);
-  const extraImages = item.images ?? item.photoUrls ?? [];
-  const variantPhotos = (item.variants ?? []).map((variant) => variant.photoUrl);
-  const images = resolveProductImages(item.photoUrl, [...extraImages, ...variantPhotos]);
+  // PDP: `photos` é a fonte única da galeria (já inclui a principal).
+  const images = resolveProductImages(item.photos, item.photoUrl);
   const { rating, reviewCount } = mapRating(item.rating, item.reviewCount);
   const { variantLabel, variants } = mapVariants(item.variants, item.variantOptions);
   const description = (item.description ?? '').trim();
@@ -187,4 +196,8 @@ export function mapStoreGroups(groups: StoreNamedRef[]): Category[] {
     categories.push(category);
   }
   return categories.sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'));
+}
+
+export function mapStoreSubgroups(subgroups: StoreNamedRef[]): Category[] {
+  return mapStoreGroups(subgroups);
 }

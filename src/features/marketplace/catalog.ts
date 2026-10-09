@@ -3,11 +3,17 @@ import type { CartLine, CatalogQuery, Category, Product } from '@/features/marke
 
 let productsCache: Product[] = [];
 let categoriesCache: Category[] = [];
+let subcategoriesCache: Category[] = [];
 let catalogReady = false;
 
-export function setCatalogData(products: Product[], categories: Category[]) {
+export function setCatalogData(
+  products: Product[],
+  categories: Category[],
+  subcategories: Category[] = [],
+) {
   productsCache = products;
   categoriesCache = categories;
+  subcategoriesCache = subcategories;
   catalogReady = true;
 }
 
@@ -23,8 +29,16 @@ export function categoriesOf() {
   return categoriesCache;
 }
 
+export function subcategoriesOf() {
+  return subcategoriesCache;
+}
+
 export function getCategory(slug: string) {
   return categoriesCache.find((category) => category.slug === slug) ?? null;
+}
+
+export function getSubcategory(slug: string) {
+  return subcategoriesCache.find((item) => item.slug === slug) ?? null;
 }
 
 export function getProductBySlug(slug: string) {
@@ -35,6 +49,18 @@ export function getProductById(id: string) {
   return productsCache.find((product) => product.id === id) ?? null;
 }
 
+function ensureCategory(slug: string, cache: Category[], name = slug) {
+  if (!slug || cache.some((item) => item.slug === slug)) return cache;
+  return [
+    ...cache,
+    {
+      slug,
+      name,
+      description: `Produtos em ${name}.`,
+    },
+  ];
+}
+
 export function upsertCatalogProduct(product: Product) {
   const index = productsCache.findIndex((item) => item.id === product.id);
   if (index >= 0) {
@@ -43,15 +69,9 @@ export function upsertCatalogProduct(product: Product) {
     productsCache = [...productsCache, product];
   }
 
-  if (product.categorySlug && !categoriesCache.some((item) => item.slug === product.categorySlug)) {
-    categoriesCache = [
-      ...categoriesCache,
-      {
-        slug: product.categorySlug,
-        name: product.categorySlug,
-        description: `Produtos em ${product.categorySlug}.`,
-      },
-    ];
+  categoriesCache = ensureCategory(product.categorySlug, categoriesCache);
+  if (product.subcategorySlug) {
+    subcategoriesCache = ensureCategory(product.subcategorySlug, subcategoriesCache);
   }
 }
 
@@ -97,6 +117,7 @@ export function filterCatalog(products: Product[], query: CatalogQuery) {
   const term = fold(query.q?.trim() ?? '');
   const filtered = products.filter((product) => {
     if (query.category && product.categorySlug !== query.category) return false;
+    if (query.subcategory && product.subcategorySlug !== query.subcategory) return false;
     if (query.freeShipping && !product.freeShipping) return false;
     if (query.condition && product.condition !== query.condition) return false;
     if (query.onSale && !isOnSale(product)) return false;
@@ -104,7 +125,12 @@ export function filterCatalog(products: Product[], query: CatalogQuery) {
     if (query.favoritesOnly && !query.favoriteIds?.includes(product.id)) return false;
     if (!term) return true;
     const category = getCategory(product.categorySlug);
-    const haystack = fold([product.name, product.summary, category?.name ?? ''].join(' '));
+    const subcategory = product.subcategorySlug
+      ? getSubcategory(product.subcategorySlug)
+      : null;
+    const haystack = fold(
+      [product.name, product.summary, category?.name ?? '', subcategory?.name ?? ''].join(' '),
+    );
     return haystack.includes(term);
   });
 
@@ -138,7 +164,35 @@ export function relatedCategories(products: Product[]) {
     });
 }
 
+export function relatedSubcategories(products: Product[]) {
+  const counts = new Map<string, number>();
+  for (const product of products) {
+    if (!product.subcategorySlug) continue;
+    counts.set(
+      product.subcategorySlug,
+      (counts.get(product.subcategorySlug) ?? 0) + 1,
+    );
+  }
+
+  return [...counts.entries()]
+    .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0], 'pt-BR'))
+    .flatMap(([slug]) => {
+      const subcategory = getSubcategory(slug);
+      return subcategory ? [subcategory] : [];
+    });
+}
+
 export function relatedProducts(product: Product, products: Product[]) {
+  const sameSubcategory = product.subcategorySlug
+    ? products.filter(
+        (item) =>
+          item.subcategorySlug === product.subcategorySlug &&
+          item.id !== product.id &&
+          item.stock > 0,
+      )
+    : [];
+  if (sameSubcategory.length > 0) return sameSubcategory.slice(0, 4);
+
   return products
     .filter(
       (item) =>
@@ -149,6 +203,7 @@ export function relatedProducts(product: Product, products: Product[]) {
 
 export function catalogFacets(products: Product[], query: CatalogQuery) {
   const categoryQuery = { ...query, category: undefined };
+  const subcategoryQuery = { ...query, subcategory: undefined };
   const priceQuery = { ...query, price: '' as const, priceMin: null, priceMax: null };
   const conditionQuery = { ...query, condition: '' as const };
   const shippingQuery = { ...query, freeShipping: false };
@@ -164,6 +219,18 @@ export function catalogFacets(products: Product[], query: CatalogQuery) {
     .filter((item) => item.count > 0 || item.slug === query.category)
     .sort((a, b) => b.count - a.count || a.name.localeCompare(b.name, 'pt-BR'));
 
+  const subcategories = subcategoriesOf()
+    .map((subcategory) => ({
+      slug: subcategory.slug,
+      name: subcategory.name,
+      count: filterCatalog(products, {
+        ...subcategoryQuery,
+        subcategory: subcategory.slug,
+      }).length,
+    }))
+    .filter((item) => item.count > 0 || item.slug === query.subcategory)
+    .sort((a, b) => b.count - a.count || a.name.localeCompare(b.name, 'pt-BR'));
+
   const prices = PRICE_BANDS.map((band) => ({
     ...band,
     count: filterCatalog(products, { ...priceQuery, price: band.id }).length,
@@ -177,6 +244,7 @@ export function catalogFacets(products: Product[], query: CatalogQuery) {
   return {
     total: filterCatalog(products, query).length,
     categories,
+    subcategories,
     prices,
     conditions,
     freeShipping: filterCatalog(products, { ...shippingQuery, freeShipping: true }).length,
@@ -186,6 +254,10 @@ export function catalogFacets(products: Product[], query: CatalogQuery) {
 
 export function countInCategory(slug: string, products: Product[]) {
   return products.filter((product) => product.categorySlug === slug).length;
+}
+
+export function countInSubcategory(slug: string, products: Product[]) {
+  return products.filter((product) => product.subcategorySlug === slug).length;
 }
 
 export function paginate<T>(items: readonly T[], page: number, pageSize: number) {

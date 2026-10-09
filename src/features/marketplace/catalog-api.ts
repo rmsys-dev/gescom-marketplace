@@ -16,6 +16,7 @@ export class CatalogApiError extends Error {
 export type CatalogBootstrapResponse = {
   products: Product[];
   categories: Category[];
+  subcategories: Category[];
   message?: string;
 };
 

@@ -5,7 +5,12 @@ import Link from 'next/link';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { Fragment, useEffect, useMemo } from 'react';
 
-import { filterCatalog, formatSearchTerm, relatedCategories } from '@/features/marketplace/catalog';
+import {
+  filterCatalog,
+  formatSearchTerm,
+  relatedCategories,
+  relatedSubcategories,
+} from '@/features/marketplace/catalog';
 import { EmptyState, SectionHeader } from '@/features/marketplace/components/bits';
 import { FilterSidebar, ListingFrame } from '@/features/marketplace/components/filter-sidebar';
 import { ProductGrid } from '@/features/marketplace/components/product-card';
@@ -29,12 +34,14 @@ export function CatalogView({
   title,
   description,
   categorySlug,
+  subcategorySlug,
   favoritesOnly = false,
   showRecent = false,
 }: {
   title: string;
   description?: string;
   categorySlug?: string;
+  subcategorySlug?: string;
   favoritesOnly?: boolean;
   showRecent?: boolean;
 }) {
@@ -56,11 +63,12 @@ export function CatalogView({
     () => ({
       q,
       category: categorySlug,
+      subcategory: subcategorySlug,
       favoritesOnly,
       favoriteIds: favorites,
       ...(favoritesOnly ? {} : filtersToCatalogQuery(filters)),
     }),
-    [q, categorySlug, favoritesOnly, favorites, filters],
+    [q, categorySlug, subcategorySlug, favoritesOnly, favorites, filters],
   );
   const result = useMemo(() => filterCatalog(products, query), [products, query]);
 
@@ -79,7 +87,16 @@ export function CatalogView({
   const term = formatSearchTerm(q);
   const searching = pathname === '/busca' && term.length > 0;
   const categories = searching ? relatedCategories(result) : [];
+  const subcategories = searching ? relatedSubcategories(result) : [];
   const resultLabel = `${result.length} ${result.length === 1 ? 'resultado' : 'resultados'}`;
+  const scopedHeading = categorySlug || subcategorySlug ? title : 'Todas';
+  const listingScope = {
+    q,
+    category: categorySlug,
+    subcategory: subcategorySlug,
+    favoritesOnly,
+    favoriteIds: favorites,
+  };
 
   if (!catalogReady) {
     const loading = (
@@ -93,11 +110,7 @@ export function CatalogView({
     return (
       <ListingFrame
         sidebar={
-          <FilterSidebar
-            products={[]}
-            heading={categorySlug ? title : 'Todas'}
-            scope={{ q, category: categorySlug, favoritesOnly, favoriteIds: favorites }}
-          />
+          <FilterSidebar products={[]} heading={scopedHeading} scope={listingScope} />
         }
       >
         {loading}
@@ -122,7 +135,7 @@ export function CatalogView({
                 {resultLabel}
               </span>
             </h1>
-            {categories.length > 0 ? (
+            {categories.length > 0 || subcategories.length > 0 ? (
               <Breadcrumb aria-label="Categorias relacionadas">
                 <BreadcrumbList>
                   <BreadcrumbItem>
@@ -131,11 +144,25 @@ export function CatalogView({
                     </BreadcrumbLink>
                   </BreadcrumbItem>
                   {categories.map((category, index) => (
-                    <Fragment key={category.slug}>
+                    <Fragment key={`cat-${category.slug}`}>
                       <BreadcrumbSeparator>{index === 0 ? undefined : '·'}</BreadcrumbSeparator>
                       <BreadcrumbItem>
                         <BreadcrumbLink asChild>
                           <Link href={`/categoria/${category.slug}`}>{category.name}</Link>
+                        </BreadcrumbLink>
+                      </BreadcrumbItem>
+                    </Fragment>
+                  ))}
+                  {subcategories.map((subcategory, index) => (
+                    <Fragment key={`sub-${subcategory.slug}`}>
+                      <BreadcrumbSeparator>
+                        {categories.length === 0 && index === 0 ? undefined : '·'}
+                      </BreadcrumbSeparator>
+                      <BreadcrumbItem>
+                        <BreadcrumbLink asChild>
+                          <Link href={`/subcategoria/${subcategory.slug}`}>
+                            {subcategory.name}
+                          </Link>
                         </BreadcrumbLink>
                       </BreadcrumbItem>
                     </Fragment>
@@ -248,8 +275,8 @@ export function CatalogView({
       sidebar={
         <FilterSidebar
           products={products}
-          heading={categorySlug ? title : 'Todas'}
-          scope={{ q, category: categorySlug, favoritesOnly, favoriteIds: favorites }}
+          heading={scopedHeading}
+          scope={listingScope}
         />
       }
     >

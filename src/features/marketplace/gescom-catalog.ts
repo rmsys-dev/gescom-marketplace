@@ -5,6 +5,7 @@ import {
   mapStoreProductDetail,
   mapStoreProductListItem,
   mapStoreReview,
+  mapStoreSubgroups,
   slugifyLabel,
 } from '@/features/marketplace/catalog-map';
 import type {
@@ -25,6 +26,7 @@ export type CatalogListQuery = {
   subgroup?: string;
   brand?: string;
   featured?: boolean;
+  freeShipping?: boolean;
 };
 
 function toQuery(params: CatalogListQuery) {
@@ -36,6 +38,7 @@ function toQuery(params: CatalogListQuery) {
   if (params.subgroup?.trim()) search.set('subgroup', params.subgroup.trim());
   if (params.brand?.trim()) search.set('brand', params.brand.trim());
   if (params.featured != null) search.set('featured', String(params.featured));
+  if (params.freeShipping != null) search.set('freeShipping', String(params.freeShipping));
   const qs = search.toString();
   return qs ? `?${qs}` : '';
 }
@@ -89,6 +92,14 @@ export async function fetchStoreGroups() {
   return { categories: mapStoreGroups(groups), groups, message };
 }
 
+export async function fetchStoreSubgroups() {
+  const { data, message } = await gescom<StoreNamedRef[]>(storeCatalogPath('/subgroups'), {
+    method: 'GET',
+  });
+  const subgroups = Array.isArray(data) ? data : [];
+  return { subcategories: mapStoreSubgroups(subgroups), subgroups, message };
+}
+
 export async function fetchStoreBrands() {
   const { data, message } = await gescom<StoreNamedRef[]>(storeCatalogPath('/brands'), {
     method: 'GET',
@@ -124,54 +135,88 @@ export async function findStoreCategoryBySlug(slug: string): Promise<Category | 
   return categories.find((category) => category.slug === slug) ?? null;
 }
 
-export async function loadStoreCatalog() {
-  const [productsResult, groupsResult] = await Promise.all([
-    fetchAllStoreProducts(),
-    fetchStoreGroups(),
-  ]);
+export async function findStoreSubcategoryBySlug(slug: string): Promise<Category | null> {
+  const { subcategories } = await fetchStoreSubgroups();
+  return subcategories.find((item) => item.slug === slug) ?? null;
+}
 
-  // Garante categorias presentes nos produtos mesmo se /groups vier vazio.
-  const fromProducts = new Map<string, Category>();
-  for (const product of productsResult.products) {
-    if (!product.categorySlug || fromProducts.has(product.categorySlug)) continue;
-    const groupName =
-      groupsResult.categories.find((item) => item.slug === product.categorySlug)?.name ??
-      product.categorySlug;
-    fromProducts.set(product.categorySlug, {
-      slug: product.categorySlug,
-      name: groupName
-        .split('-')
-        .map((part) => part.charAt(0).toLocaleUpperCase('pt-BR') + part.slice(1))
-        .join(' '),
-      description: `Produtos em ${groupName}.`,
-    });
-  }
+function titleFromSlug(slug: string) {
+  return slug
+    .split('-')
+    .map((part) => part.charAt(0).toLocaleUpperCase('pt-BR') + part.slice(1))
+    .join(' ');
+}
 
+function mergeNamedCatalog(
+  fromApi: Category[],
+  refs: StoreNamedRef[],
+  fromProducts: Map<string, Category>,
+) {
   const bySlug = new Map<string, Category>();
-  for (const category of [...groupsResult.categories, ...fromProducts.values()]) {
-    bySlug.set(category.slug, category);
+  for (const item of [...fromApi, ...fromProducts.values()]) {
+    bySlug.set(item.slug, item);
   }
 
-  // Corrige nomes a partir dos grupos da API quando o slug bate.
-  for (const group of groupsResult.groups) {
-    const slug = slugifyLabel(group.name);
+  for (const ref of refs) {
+    const slug = slugifyLabel(ref.name);
     const current = bySlug.get(slug);
     if (current) {
       bySlug.set(slug, {
         ...current,
-        name: group.name,
-        description: `Produtos em ${group.name}.`,
+        name: ref.name,
+        description: `Produtos em ${ref.name}.`,
       });
     }
   }
 
-  const categories = [...bySlug.values()].sort((a, b) =>
-    a.name.localeCompare(b.name, 'pt-BR'),
-  );
+  return [...bySlug.values()].sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'));
+}
+
+export async function loadStoreCatalog() {
+  const [productsResult, groupsResult, subgroupsResult] = await Promise.all([
+    fetchAllStoreProducts(),
+    fetchStoreGroups(),
+    fetchStoreSubgroups(),
+  ]);
+
+  // Garante categorias presentes nos produtos mesmo se /groups vier vazio.
+  const categoriesFromProducts = new Map<string, Category>();
+  const subcategoriesFromProducts = new Map<string, Category>();
+  for (const product of productsResult.products) {
+    if (product.categorySlug && !categoriesFromProducts.has(product.categorySlug)) {
+      const groupName =
+        groupsResult.categories.find((item) => item.slug === product.categorySlug)?.name ??
+        product.categorySlug;
+      categoriesFromProducts.set(product.categorySlug, {
+        slug: product.categorySlug,
+        name: titleFromSlug(groupName),
+        description: `Produtos em ${groupName}.`,
+      });
+    }
+    if (product.subcategorySlug && !subcategoriesFromProducts.has(product.subcategorySlug)) {
+      const subgroupName =
+        subgroupsResult.subcategories.find((item) => item.slug === product.subcategorySlug)
+          ?.name ?? product.subcategorySlug;
+      subcategoriesFromProducts.set(product.subcategorySlug, {
+        slug: product.subcategorySlug,
+        name: titleFromSlug(subgroupName),
+        description: `Produtos em ${subgroupName}.`,
+      });
+    }
+  }
 
   return {
     products: productsResult.products,
-    categories,
+    categories: mergeNamedCatalog(
+      groupsResult.categories,
+      groupsResult.groups,
+      categoriesFromProducts,
+    ),
+    subcategories: mergeNamedCatalog(
+      subgroupsResult.subcategories,
+      subgroupsResult.subgroups,
+      subcategoriesFromProducts,
+    ),
     message: productsResult.message,
   };
 }

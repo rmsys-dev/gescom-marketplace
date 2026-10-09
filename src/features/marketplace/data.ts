@@ -35,6 +35,22 @@ export const CATEGORIES: Category[] = [
   },
 ];
 
+
+export const SUBCATEGORIES: Category[] = [
+  { slug: 'audio', name: 'Áudio', description: 'Fones e som portátil.' },
+  { slug: 'smartphones', name: 'Smartphones', description: 'Celulares e acessórios.' },
+  { slug: 'calcados', name: 'Calçados', description: 'Tênis e sapatos do dia a dia.' },
+  { slug: 'acessorios', name: 'Acessórios', description: 'Relógios e complementos.' },
+  { slug: 'bolsas', name: 'Bolsas', description: 'Bolsas e mochilas.' },
+  { slug: 'iluminacao', name: 'Iluminação', description: 'Luminárias e luzes.' },
+  { slug: 'decoracao', name: 'Decoração', description: 'Peças para a casa.' },
+  { slug: 'cozinha', name: 'Cozinha', description: 'Utensílios e panelas.' },
+  { slug: 'cafe', name: 'Café', description: 'Grãos e preparo.' },
+  { slug: 'despensa', name: 'Despensa', description: 'Itens do consumo do mês.' },
+  { slug: 'cuidados', name: 'Cuidados', description: 'Beleza e higiene.' },
+  { slug: 'treino', name: 'Treino', description: 'Equipamentos leves.' },
+];
+
 export const PRODUCTS: Product[] = [
   {
     id: 'p-fone',
@@ -46,6 +62,7 @@ export const PRODUCTS: Product[] = [
     price: 34_990,
     compareAtPrice: 42_990,
     categorySlug: 'eletronicos',
+    subcategorySlug: 'audio',
     images: [
       img('photo-1505740420928-5e560c06d30e'),
       img('photo-1484704849700-f032a568e944'),
@@ -82,6 +99,7 @@ export const PRODUCTS: Product[] = [
     price: 29_990,
     compareAtPrice: 39_990,
     categorySlug: 'moda',
+    subcategorySlug: 'calcados',
     images: [
       img('photo-1542291026-7eec264c27ff'),
       img('photo-1460353581641-37baddab0fa2'),
@@ -116,6 +134,7 @@ export const PRODUCTS: Product[] = [
     price: 18_990,
     compareAtPrice: null,
     categorySlug: 'moda',
+    subcategorySlug: 'acessorios',
     images: [
       img('photo-1523275335684-37898b6baf30'),
       img('photo-1524805444758-089113d48a6d'),
@@ -148,6 +167,7 @@ export const PRODUCTS: Product[] = [
     price: 15_990,
     compareAtPrice: null,
     categorySlug: 'moda',
+    subcategorySlug: 'bolsas',
     images: [
       img('photo-1553062407-98eeb64c6a62'),
       img('photo-1622560480605-d83c853bc5c3'),
@@ -174,6 +194,7 @@ export const PRODUCTS: Product[] = [
     price: 24_990,
     compareAtPrice: 29_990,
     categorySlug: 'casa',
+    subcategorySlug: 'iluminacao',
     images: [
       img('photo-1507473885765-e6ed057f782c'),
       img('photo-1513506003901-1e6a229e2d15'),
@@ -205,6 +226,7 @@ export const PRODUCTS: Product[] = [
     price: 2_890,
     compareAtPrice: null,
     categorySlug: 'mercado',
+    subcategorySlug: 'cafe',
     images: [
       img('photo-1495474472287-4d71bcdd2085'),
       img('photo-1447933601403-0c6688de566e'),
@@ -231,6 +253,7 @@ export const PRODUCTS: Product[] = [
     price: 7_990,
     compareAtPrice: null,
     categorySlug: 'casa',
+    subcategorySlug: 'decoracao',
     images: [
       img('photo-1485955900006-10f4d324d411'),
       img('photo-1463320726281-696a485928c7'),
@@ -257,6 +280,7 @@ export const PRODUCTS: Product[] = [
     price: 189_900,
     compareAtPrice: null,
     categorySlug: 'eletronicos',
+    subcategorySlug: 'smartphones',
     images: [
       img('photo-1511707171634-5f897ff02aa9'),
       img('photo-1510557880182-3d4d3cba35a5'),
@@ -289,6 +313,7 @@ export const PRODUCTS: Product[] = [
     price: 8_990,
     compareAtPrice: null,
     categorySlug: 'beleza',
+    subcategorySlug: 'cuidados',
     images: [
       img('photo-1556228720-195a672e8a03'),
       img('photo-1571781926291-c477ebfd024b'),
@@ -315,6 +340,7 @@ export const PRODUCTS: Product[] = [
     price: 12_990,
     compareAtPrice: null,
     categorySlug: 'esportes',
+    subcategorySlug: 'treino',
     images: [
       img('photo-1544367567-0f2fcb009e0b'),
       img('photo-1601925260368-ae2f83cf8b7f'),
@@ -347,6 +373,7 @@ export const PRODUCTS: Product[] = [
     price: 21_990,
     compareAtPrice: null,
     categorySlug: 'casa',
+    subcategorySlug: 'cozinha',
     images: [
       img('photo-1556909114-f6e7ad7d3136'),
       img('photo-1590794056226-79ef3a8147e1'),
@@ -373,6 +400,7 @@ export const PRODUCTS: Product[] = [
     price: 4_590,
     compareAtPrice: null,
     categorySlug: 'mercado',
+    subcategorySlug: 'despensa',
     images: [
       img('photo-1512820790803-83ca734da794'),
       img('photo-1544947950-fa07a98d237f'),

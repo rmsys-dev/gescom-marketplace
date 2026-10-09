@@ -9,8 +9,14 @@ import {
   resolveCart,
   setCatalogData,
 } from '@/features/marketplace/catalog';
-import { decimalToCents, mapStoreProductListItem, parseStock } from '@/features/marketplace/catalog-map';
-import { CATEGORIES, PRODUCTS } from '@/features/marketplace/data';
+import {
+  decimalToCents,
+  mapStoreProductDetail,
+  mapStoreProductListItem,
+  parseStock,
+} from '@/features/marketplace/catalog-map';
+import type { StoreProductListItem } from '@/features/marketplace/catalog-types';
+import { CATEGORIES, PRODUCTS, SUBCATEGORIES } from '@/features/marketplace/data';
 import { countActiveFilters, readFilters } from '@/features/marketplace/filters';
 import {
   cartTotals,
@@ -18,11 +24,14 @@ import {
   formatPriceParam,
   parseReais,
 } from '@/features/marketplace/money';
-import { PRODUCT_IMAGE_FALLBACK, resolveProductImages } from '@/features/marketplace/product-images';
-import type { StoreProductListItem } from '@/features/marketplace/catalog-types';
+import {
+  PRODUCT_IMAGE_FALLBACK,
+  productImageSrc,
+  resolveProductImages,
+} from '@/features/marketplace/product-images';
 
 beforeEach(() => {
-  setCatalogData(PRODUCTS, CATEGORIES);
+  setCatalogData(PRODUCTS, CATEGORIES, SUBCATEGORIES);
 });
 
 describe('catálogo', () => {
@@ -73,6 +82,22 @@ describe('catálogo', () => {
     );
   });
 
+  it('filtra e conta sub-categorias sem prender a sub-categoria atual', () => {
+    const result = filterCatalog(PRODUCTS, { subcategory: 'audio' });
+    expect(result.map((product) => product.id)).toEqual(['p-fone']);
+
+    const facets = catalogFacets(PRODUCTS, { subcategory: 'audio', freeShipping: true });
+    expect(facets.total).toBe(
+      filterCatalog(PRODUCTS, { subcategory: 'audio', freeShipping: true }).length,
+    );
+    expect(
+      facets.subcategories.find((item) => item.slug === 'calcados')?.count,
+    ).toBeGreaterThan(0);
+    expect(facets.subcategories.find((item) => item.slug === 'audio')?.count).toBe(
+      facets.total,
+    );
+  });
+
   it('lê faixa livre e oferta na query', () => {
     const filters = readFilters(new URLSearchParams('preco=ate-50&min=10&oferta=1&frete=gratis'));
     expect(filters.price).toBe('');
@@ -118,8 +143,10 @@ describe('mapeamento da API', () => {
     id: 'listing-1',
     slug: 'produto-01',
     featured: true,
+    freeShipping: true,
     name: 'Produto Marketplace 01',
     photoUrl: null,
+    photos: [],
     stockBalance: '11.0000',
     group: { id: 'g1', name: 'Eletronicos' },
     subgroup: { id: 's1', name: 'Smartphones' },
@@ -139,15 +166,60 @@ describe('mapeamento da API', () => {
     expect(parseStock('11.0000')).toBe(11);
   });
 
-  it('usa placeholder quando photoUrl é nulo', () => {
-    expect(resolveProductImages(null)).toEqual([PRODUCT_IMAGE_FALLBACK]);
+  it('usa placeholder quando não há fotos', () => {
+    expect(resolveProductImages(null, null)).toEqual([PRODUCT_IMAGE_FALLBACK]);
+    expect(resolveProductImages([], null)).toEqual([PRODUCT_IMAGE_FALLBACK]);
     const mapped = mapStoreProductListItem(sample);
     expect(mapped.images).toEqual([PRODUCT_IMAGE_FALLBACK]);
     expect(mapped.price).toBe(1989);
     expect(mapped.compareAtPrice).toBe(2340);
     expect(mapped.categorySlug).toBe('eletronicos');
+    expect(mapped.subcategorySlug).toBe('smartphones');
     expect(mapped.featured).toBe(true);
+    expect(mapped.freeShipping).toBe(true);
     expect(mapped.stock).toBe(11);
+  });
+
+  it('usa photos[0] ?? photoUrl como capa e monta a galeria da PDP', () => {
+    const withGallery = {
+      ...sample,
+      photoUrl: '/fotos/produtos/principal.webp',
+      photos: [
+        '/fotos/produtos/principal.webp',
+        '/fotos/produtos/extra-1.jpg',
+        '/fotos/produtos/extra-2.webp',
+      ],
+    };
+
+    const listed = mapStoreProductListItem(withGallery);
+    expect(listed.images[0]).toBe(productImageSrc('/fotos/produtos/principal.webp'));
+    expect(listed.images).toHaveLength(3);
+
+    const detail = mapStoreProductDetail({
+      ...withGallery,
+      description: 'Descrição da loja',
+    });
+    expect(detail.images).toEqual([
+      productImageSrc('/fotos/produtos/principal.webp'),
+      productImageSrc('/fotos/produtos/extra-1.jpg'),
+      productImageSrc('/fotos/produtos/extra-2.webp'),
+    ]);
+
+    // photoUrl nulo com extras em photos (capa = photos[0])
+    const onlyExtras = mapStoreProductListItem({
+      ...sample,
+      photoUrl: null,
+      photos: ['/fotos/produtos/extra-1.jpg'],
+    });
+    expect(onlyExtras.images).toEqual([productImageSrc('/fotos/produtos/extra-1.jpg')]);
+  });
+
+  it('trata freeShipping ausente como falso', () => {
+    const mapped = mapStoreProductListItem({
+      ...sample,
+      freeShipping: undefined as unknown as boolean,
+    });
+    expect(mapped.freeShipping).toBe(false);
   });
 });
 

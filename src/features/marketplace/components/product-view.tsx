@@ -29,7 +29,12 @@ import { useEffect, useState, type FormEvent } from 'react';
 import { toast } from 'sonner';
 
 import { fetchCatalogProduct } from '@/features/marketplace/catalog-api';
-import { getCategory, getProductBySlug, relatedProducts } from '@/features/marketplace/catalog';
+import {
+  getCategory,
+  getProductBySlug,
+  getSubcategory,
+  relatedProducts,
+} from '@/features/marketplace/catalog';
 import {
   EmptyState,
   formatWhen,
@@ -836,6 +841,9 @@ export function ProductView({ slug }: { slug: string }) {
   }
 
   const category = getCategory(product.categorySlug);
+  const subcategory = product.subcategorySlug
+    ? getSubcategory(product.subcategorySlug)
+    : null;
   const related = relatedProducts(product, products);
   const soldOut = product.stock <= 0;
   const saved = favorites.includes(product.id);
@@ -897,13 +905,27 @@ export function ProductView({ slug }: { slug: string }) {
             <div className="@container flex h-full w-full min-w-0 flex-col gap-5 md:col-span-2 lg:col-span-1 lg:col-start-3">
               <div className="flex items-start justify-between gap-3">
                 <div className="space-y-2">
-                  {category ? (
-                    <Link
-                      href={`/categoria/${category.slug}`}
-                      className="text-sm font-medium text-primary"
-                    >
-                      {category.name}
-                    </Link>
+                  {category || subcategory ? (
+                    <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm font-medium">
+                      {category ? (
+                        <Link href={`/categoria/${category.slug}`} className="text-primary">
+                          {category.name}
+                        </Link>
+                      ) : null}
+                      {category && subcategory ? (
+                        <span className="text-muted-foreground" aria-hidden>
+                          /
+                        </span>
+                      ) : null}
+                      {subcategory ? (
+                        <Link
+                          href={`/subcategoria/${subcategory.slug}`}
+                          className="text-primary"
+                        >
+                          {subcategory.name}
+                        </Link>
+                      ) : null}
+                    </p>
                   ) : null}
                   <p className="text-sm text-muted-foreground">
                     {product.condition === 'novo' ? 'Novo' : 'Usado'}

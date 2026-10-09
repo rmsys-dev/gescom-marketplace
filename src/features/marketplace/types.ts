@@ -26,6 +26,8 @@ export type Product = {
   price: number;
   compareAtPrice: number | null;
   categorySlug: string;
+  /** Subgrupo do ERP (`subgroup`), tratado como sub-categoria na loja. */
+  subcategorySlug: string | null;
   images: string[];
   rating: number;
   reviewCount: number;
@@ -134,6 +136,7 @@ export type CatalogSort = 'relevancia' | 'menor-preco' | 'maior-preco' | 'avalia
 export type CatalogQuery = {
   q?: string;
   category?: string;
+  subcategory?: string;
   freeShipping?: boolean;
   condition?: ProductCondition | '';
   price?: PriceBand;

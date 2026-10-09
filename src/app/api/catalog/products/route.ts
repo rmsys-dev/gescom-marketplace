@@ -5,6 +5,7 @@ export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
     const featured = searchParams.get('featured');
+    const freeShipping = searchParams.get('freeShipping');
     const result = await fetchStoreProducts({
       limit: Number(searchParams.get('limit') ?? 24) || 24,
       offset: Number(searchParams.get('offset') ?? 0) || 0,
@@ -13,6 +14,8 @@ export async function GET(request: Request) {
       subgroup: searchParams.get('subgroup') ?? undefined,
       brand: searchParams.get('brand') ?? undefined,
       featured: featured === 'true' ? true : featured === 'false' ? false : undefined,
+      freeShipping:
+        freeShipping === 'true' ? true : freeShipping === 'false' ? false : undefined,
     });
 
     return jsonOk({

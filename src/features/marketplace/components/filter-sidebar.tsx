@@ -31,7 +31,7 @@ function listingHref(
   pathname: string,
   params: URLSearchParams,
   patch: Record<string, string | null>,
-  category?: string | null,
+  target?: { category?: string | null; subcategory?: string | null },
 ) {
   const search = new URLSearchParams(params.toString());
   for (const [key, value] of Object.entries(patch)) {
@@ -40,8 +40,9 @@ function listingHref(
   }
 
   let path = pathname;
-  if (typeof category === 'string') path = `/categoria/${category}`;
-  else if (category === null) {
+  if (typeof target?.subcategory === 'string') path = `/subcategoria/${target.subcategory}`;
+  else if (typeof target?.category === 'string') path = `/categoria/${target.category}`;
+  else if (target?.category === null || target?.subcategory === null) {
     path = pathname.startsWith('/conta/') ? '/conta/favoritos' : search.get('q') ? '/busca' : '/';
   }
 
@@ -93,7 +94,10 @@ export function FilterSidebar({
 }: {
   products: Product[];
   heading: string;
-  scope?: Pick<CatalogQuery, 'q' | 'category' | 'favoritesOnly' | 'favoriteIds'>;
+  scope?: Pick<
+    CatalogQuery,
+    'q' | 'category' | 'subcategory' | 'favoritesOnly' | 'favoriteIds'
+  >;
   countLabel?: string;
 }) {
   const pathname = usePathname();
@@ -102,8 +106,10 @@ export function FilterSidebar({
   const filters = readFilters(params);
   const query: CatalogQuery = { ...scope, ...filtersToCatalogQuery(filters) };
   const facets = catalogFacets(products, query);
-  const href = (patch: Record<string, string | null>, category?: string | null) =>
-    listingHref(pathname, params, patch, category);
+  const href = (
+    patch: Record<string, string | null>,
+    target?: { category?: string | null; subcategory?: string | null },
+  ) => listingHref(pathname, params, patch, target);
   const rangeActive = filters.priceMin != null || filters.priceMax != null;
   const sort = filters.sort;
   const totalText =
@@ -181,11 +187,32 @@ export function FilterSidebar({
                 return (
                   <li key={category.slug}>
                     <FilterLink
-                      href={href({}, active ? null : category.slug)}
+                      href={href({}, { category: active ? null : category.slug })}
                       active={active}
                       pathname={pathname}
                     >
                       {category.name} ({category.count.toLocaleString('pt-BR')})
+                    </FilterLink>
+                  </li>
+                );
+              })}
+            </ul>
+          </FilterSection>
+        ) : null}
+
+        {!scope?.favoritesOnly && facets.subcategories.length > 0 ? (
+          <FilterSection title="Sub-categorias">
+            <ul>
+              {facets.subcategories.map((subcategory) => {
+                const active = query.subcategory === subcategory.slug;
+                return (
+                  <li key={subcategory.slug}>
+                    <FilterLink
+                      href={href({}, { subcategory: active ? null : subcategory.slug })}
+                      active={active}
+                      pathname={pathname}
+                    >
+                      {subcategory.name} ({subcategory.count.toLocaleString('pt-BR')})
                     </FilterLink>
                   </li>
                 );

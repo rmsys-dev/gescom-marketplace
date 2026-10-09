@@ -17,8 +17,16 @@ export type StoreProductListItem = {
   id: string;
   slug: string;
   featured: boolean;
+  /** Oferta de frete grátis no listing (`freeShipping` da API). */
+  freeShipping: boolean;
   name: string;
+  /** Foto principal do PE (`products_enterprises.photo_url`). */
   photoUrl: string | null;
+  /**
+   * Galeria montada pela API: principal + extras do listing, sem duplicatas, máx. 6.
+   * Na listagem, use `photos[0] ?? photoUrl` como capa.
+   */
+  photos?: string[];
   stockBalance: string;
   group: StoreNamedRef | null;
   subgroup: StoreNamedRef | null;
@@ -82,6 +90,4 @@ export type StoreProductDetail = StoreProductListItem & {
   reviewCount?: number | null;
   reviews?: StoreReview[];
   questions?: StoreQuestion[];
-  images?: Array<string | null>;
-  photoUrls?: Array<string | null>;
 };

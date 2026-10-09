@@ -16,6 +16,7 @@ import {
   getProductById,
   isCatalogReady,
   setCatalogData,
+  subcategoriesOf,
   upsertCatalogProduct,
 } from '@/features/marketplace/catalog';
 import { DEMO_ORDERS } from '@/features/marketplace/data';
@@ -152,12 +153,12 @@ export async function syncSessionFromServer() {
 export async function syncCatalogFromServer() {
   try {
     const data = await fetchCatalogBootstrap();
-    setCatalogData(data.products, data.categories);
+    setCatalogData(data.products, data.categories, data.subcategories ?? []);
     commit({ catalogReady: true, catalogError: null });
   } catch (error) {
     const message =
       error instanceof Error ? error.message : 'Não foi possível carregar o catálogo.';
-    setCatalogData([], []);
+    setCatalogData([], [], []);
     commit({ catalogReady: true, catalogError: message });
   }
 }
@@ -186,12 +187,26 @@ export function hydrateMarketplace() {
   }
 }
 
-export function mergeCatalogProduct(product: Product, categories?: Category[]) {
+export function mergeCatalogProduct(
+  product: Product,
+  categories?: Category[],
+  subcategories?: Category[],
+) {
   upsertCatalogProduct(product);
+  let nextCategories = categoriesOf();
+  let nextSubcategories = subcategoriesOf();
   if (categories?.length) {
-    const bySlug = new Map(categoriesOf().map((item) => [item.slug, item]));
+    const bySlug = new Map(nextCategories.map((item) => [item.slug, item]));
     for (const category of categories) bySlug.set(category.slug, category);
-    setCatalogData(catalogOf(), [...bySlug.values()]);
+    nextCategories = [...bySlug.values()];
+  }
+  if (subcategories?.length) {
+    const bySlug = new Map(nextSubcategories.map((item) => [item.slug, item]));
+    for (const subcategory of subcategories) bySlug.set(subcategory.slug, subcategory);
+    nextSubcategories = [...bySlug.values()];
+  }
+  if (categories?.length || subcategories?.length) {
+    setCatalogData(catalogOf(), nextCategories, nextSubcategories);
   }
   emit();
 }
@@ -544,6 +559,7 @@ export function useMarketplace() {
     ...state,
     products: catalogOf(),
     categories: categoriesOf(),
+    subcategories: subcategoriesOf(),
     catalogReady: state.catalogReady || isCatalogReady(),
   };
 }
