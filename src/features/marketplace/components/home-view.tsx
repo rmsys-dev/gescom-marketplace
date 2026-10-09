@@ -11,7 +11,6 @@ import { EmptyState, SectionHeader } from '@/features/marketplace/components/bit
 import { CATEGORY_ICONS } from '@/features/marketplace/components/category-bar';
 import { FilterSidebar, ListingFrame } from '@/features/marketplace/components/filter-sidebar';
 import { ProductGrid } from '@/features/marketplace/components/product-card';
-import { CATEGORIES } from '@/features/marketplace/data';
 import {
   countActiveFilters,
   filtersToCatalogQuery,
@@ -20,6 +19,7 @@ import {
 import { useMarketplace } from '@/features/marketplace/store';
 import { Button } from '@/shared/components/ui/button';
 import { cn } from '@/shared/lib/utils';
+import { Skeleton } from '@/shared/components/ui/skeleton';
 
 const CATALOG_PAGE_QUERIES = [
   { query: '(min-width: 96rem)', size: 10 },
@@ -140,7 +140,7 @@ function CatalogPager({
 }
 
 export function HomeView() {
-  const { products } = useMarketplace();
+  const { products, catalogReady, catalogError } = useMarketplace();
   const params = useSearchParams();
   const lenis = useLenis();
   const catalogRef = useRef<HTMLElement>(null);
@@ -155,8 +155,12 @@ export function HomeView() {
     () => filterCatalog(available, filtersToCatalogQuery(filters)),
     [available, filters],
   );
-  const offers = available.filter((product) => isOnSale(product)).slice(0, 4);
-  const rated = [...available].sort((a, b) => b.rating - a.rating).slice(0, 4);
+  const offers = available
+    .filter((product) => isOnSale(product) || product.featured)
+    .slice(0, 4);
+  const rated = [...available]
+    .sort((a, b) => b.rating - a.rating || Number(b.featured) - Number(a.featured))
+    .slice(0, 4);
   const pageForList = filterSeen === filterKey ? page : 1;
   const catalog = paginate(filtering ? filtered : available, pageForList, pageSize);
 
@@ -179,6 +183,33 @@ export function HomeView() {
     window.scrollTo({ top, behavior: 'smooth' });
   }
 
+  if (!catalogReady) {
+    return (
+      <ListingFrame sidebar={<FilterSidebar products={[]} heading="Menu de filtros" />}>
+        <div className="space-y-4" aria-busy aria-label="Carregando catálogo">
+          <Skeleton className="h-7 w-40" />
+          <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-4">
+            {Array.from({ length: 8 }, (_, index) => (
+              <Skeleton key={index} className="aspect-square rounded-2xl" />
+            ))}
+          </div>
+        </div>
+      </ListingFrame>
+    );
+  }
+
+  if (catalogError && products.length === 0) {
+    return (
+      <ListingFrame sidebar={<FilterSidebar products={[]} heading="Menu de filtros" />}>
+        <EmptyState
+          icon={Search}
+          title="Catálogo indisponível"
+          description={catalogError}
+        />
+      </ListingFrame>
+    );
+  }
+
   return (
     <ListingFrame sidebar={<FilterSidebar products={available} heading="Menu de filtros" />}>
       {filtering && filtered.length === 0 ? (
@@ -196,15 +227,19 @@ export function HomeView() {
         <div className="space-y-8">
           {filtering ? null : (
             <>
-              <section className="space-y-3">
-                <SectionHeader title="Ofertas" href="/busca?ordem=menor-preco" />
-                <ProductGrid products={offers} fit="aside" />
-              </section>
+              {offers.length > 0 ? (
+                <section className="space-y-3">
+                  <SectionHeader title="Ofertas" href="/busca?oferta=1" />
+                  <ProductGrid products={offers} fit="aside" />
+                </section>
+              ) : null}
 
-              <section className="space-y-3">
-                <SectionHeader title="Bem avaliados" href="/busca?ordem=avaliacao" />
-                <ProductGrid products={rated} fit="aside" />
-              </section>
+              {rated.some((product) => product.rating > 0) ? (
+                <section className="space-y-3">
+                  <SectionHeader title="Bem avaliados" href="/busca?ordem=avaliacao" />
+                  <ProductGrid products={rated} fit="aside" />
+                </section>
+              ) : null}
             </>
           )}
 
@@ -233,7 +268,17 @@ export function HomeView() {
 }
 
 export function CategoriesView() {
-  const { products } = useMarketplace();
+  const { products, categories, catalogReady } = useMarketplace();
+
+  if (!catalogReady) {
+    return (
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-4" aria-busy>
+        {Array.from({ length: 6 }, (_, index) => (
+          <Skeleton key={index} className="min-h-32 rounded-2xl" />
+        ))}
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-4">
@@ -241,27 +286,35 @@ export function CategoriesView() {
         <h1 className="text-2xl font-semibold tracking-tight">Categorias</h1>
         <p className="text-sm text-muted-foreground">Escolha um grupo para ver os anúncios.</p>
       </header>
-      <ul className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6">
-        {CATEGORIES.map((category) => {
-          const Icon = CATEGORY_ICONS[category.slug] ?? Sparkles;
-          return (
-            <li key={category.slug}>
-              <Link
-                href={`/categoria/${category.slug}`}
-                className="flex min-h-32 flex-col justify-between rounded-2xl bg-card p-4 ring-1 ring-foreground/10"
-              >
-                <Icon className="size-6 text-primary" aria-hidden />
-                <span>
-                  <span className="block font-medium">{category.name}</span>
-                  <span className="text-xs text-muted-foreground">
-                    {countInCategory(category.slug, products)} produtos
+      {categories.length === 0 ? (
+        <EmptyState
+          icon={Search}
+          title="Nenhuma categoria"
+          description="Publique produtos com grupo no ERP para listá-los aqui."
+        />
+      ) : (
+        <ul className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6">
+          {categories.map((category) => {
+            const Icon = CATEGORY_ICONS[category.slug] ?? Sparkles;
+            return (
+              <li key={category.slug}>
+                <Link
+                  href={`/categoria/${category.slug}`}
+                  className="flex min-h-32 flex-col justify-between rounded-2xl bg-card p-4 ring-1 ring-foreground/10"
+                >
+                  <Icon className="size-6 text-primary" aria-hidden />
+                  <span>
+                    <span className="block font-medium">{category.name}</span>
+                    <span className="text-xs text-muted-foreground">
+                      {countInCategory(category.slug, products)} produtos
+                    </span>
                   </span>
-                </span>
-              </Link>
-            </li>
-          );
-        })}
-      </ul>
+                </Link>
+              </li>
+            );
+          })}
+        </ul>
+      )}
     </div>
   );
 }

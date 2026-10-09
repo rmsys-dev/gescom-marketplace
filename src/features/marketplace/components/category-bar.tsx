@@ -12,7 +12,7 @@ import {
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
-import { CATEGORIES } from '@/features/marketplace/data';
+import { useMarketplace } from '@/features/marketplace/store';
 import { cn } from '@/shared/lib/utils';
 
 export const CATEGORY_ICONS: Record<string, LucideIcon> = {
@@ -26,6 +26,9 @@ export const CATEGORY_ICONS: Record<string, LucideIcon> = {
 
 export function CategoryBar() {
   const pathname = usePathname();
+  const { categories, catalogReady } = useMarketplace();
+
+  if (catalogReady && categories.length === 0) return null;
 
   return (
     <nav aria-label="Categorias" className="border-b border-border bg-background">
@@ -34,7 +37,7 @@ export function CategoryBar() {
         data-lenis-prevent-touch
       >
         <ul className="mx-auto flex w-max min-w-full items-start justify-start gap-2 px-3 py-3 md:justify-center md:px-4">
-          {CATEGORIES.map((category) => {
+          {categories.map((category) => {
             const Icon = CATEGORY_ICONS[category.slug] ?? Sparkles;
             const active = pathname === `/categoria/${category.slug}`;
             return (

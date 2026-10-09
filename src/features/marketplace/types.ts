@@ -35,6 +35,8 @@ export type Product = {
   specs: ProductSpec[];
   variantLabel?: string;
   variants?: ProductVariant[];
+  /** Destaque da API (`featured`). */
+  featured?: boolean;
 };
 
 export type Review = {

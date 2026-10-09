@@ -2,21 +2,30 @@ import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { Suspense } from 'react';
 
-import { getCategory } from '@/features/marketplace/catalog';
 import { ListingSkeleton } from '@/features/marketplace/components/bits';
 import { CatalogView } from '@/features/marketplace/components/catalog-view';
+import { findStoreCategoryBySlug } from '@/features/marketplace/gescom-catalog';
 
 type PageProps = { params: Promise<{ slug: string }> };
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { slug } = await params;
-  const category = getCategory(slug);
-  return { title: category?.name ?? 'Categoria' };
+  try {
+    const category = await findStoreCategoryBySlug(slug);
+    return { title: category?.name ?? 'Categoria' };
+  } catch {
+    return { title: 'Categoria' };
+  }
 }
 
 export default async function CategoryPage({ params }: PageProps) {
   const { slug } = await params;
-  const category = getCategory(slug);
+  let category = null;
+  try {
+    category = await findStoreCategoryBySlug(slug);
+  } catch {
+    notFound();
+  }
   if (!category) notFound();
 
   return (

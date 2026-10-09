@@ -1,21 +1,58 @@
-import { CATEGORIES, PRODUCTS } from '@/features/marketplace/data';
 import { CONDITIONS, PRICE_BANDS } from '@/features/marketplace/filters';
-import type { CartLine, CatalogQuery, Product } from '@/features/marketplace/types';
+import type { CartLine, CatalogQuery, Category, Product } from '@/features/marketplace/types';
+
+let productsCache: Product[] = [];
+let categoriesCache: Category[] = [];
+let catalogReady = false;
+
+export function setCatalogData(products: Product[], categories: Category[]) {
+  productsCache = products;
+  categoriesCache = categories;
+  catalogReady = true;
+}
+
+export function isCatalogReady() {
+  return catalogReady;
+}
 
 export function catalogOf() {
-  return PRODUCTS;
+  return productsCache;
+}
+
+export function categoriesOf() {
+  return categoriesCache;
 }
 
 export function getCategory(slug: string) {
-  return CATEGORIES.find((category) => category.slug === slug) ?? null;
+  return categoriesCache.find((category) => category.slug === slug) ?? null;
 }
 
 export function getProductBySlug(slug: string) {
-  return PRODUCTS.find((product) => product.slug === slug) ?? null;
+  return productsCache.find((product) => product.slug === slug) ?? null;
 }
 
 export function getProductById(id: string) {
-  return PRODUCTS.find((product) => product.id === id) ?? null;
+  return productsCache.find((product) => product.id === id) ?? null;
+}
+
+export function upsertCatalogProduct(product: Product) {
+  const index = productsCache.findIndex((item) => item.id === product.id);
+  if (index >= 0) {
+    productsCache = productsCache.map((item, i) => (i === index ? product : item));
+  } else {
+    productsCache = [...productsCache, product];
+  }
+
+  if (product.categorySlug && !categoriesCache.some((item) => item.slug === product.categorySlug)) {
+    categoriesCache = [
+      ...categoriesCache,
+      {
+        slug: product.categorySlug,
+        name: product.categorySlug,
+        description: `Produtos em ${product.categorySlug}.`,
+      },
+    ];
+  }
 }
 
 export function formatSearchTerm(value: string) {
@@ -118,11 +155,12 @@ export function catalogFacets(products: Product[], query: CatalogQuery) {
   const saleQuery = { ...query, onSale: false };
   const rangeActive = query.priceMin != null || query.priceMax != null;
 
-  const categories = CATEGORIES.map((category) => ({
-    slug: category.slug,
-    name: category.name,
-    count: filterCatalog(products, { ...categoryQuery, category: category.slug }).length,
-  }))
+  const categories = categoriesOf()
+    .map((category) => ({
+      slug: category.slug,
+      name: category.name,
+      count: filterCatalog(products, { ...categoryQuery, category: category.slug }).length,
+    }))
     .filter((item) => item.count > 0 || item.slug === query.category)
     .sort((a, b) => b.count - a.count || a.name.localeCompare(b.name, 'pt-BR'));
 

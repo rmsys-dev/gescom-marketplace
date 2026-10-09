@@ -25,9 +25,10 @@ import {
 import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useState, type FormEvent } from 'react';
+import { useEffect, useState, type FormEvent } from 'react';
 import { toast } from 'sonner';
 
+import { fetchCatalogProduct } from '@/features/marketplace/catalog-api';
 import { getCategory, getProductBySlug, relatedProducts } from '@/features/marketplace/catalog';
 import {
   EmptyState,
@@ -36,7 +37,6 @@ import {
   Price,
   QuantityStepper,
 } from '@/features/marketplace/components/bits';
-import { REVIEWS } from '@/features/marketplace/data';
 import {
   discountPercent,
   formatBRL,
@@ -46,7 +46,8 @@ import {
 } from '@/features/marketplace/money';
 import { maskZip, onlyDigits } from '@/features/marketplace/masks';
 import { schedulePush } from '@/features/marketplace/navigate';
-import { addToCart, toggleFavorite, useMarketplace } from '@/features/marketplace/store';
+import { productCoverImage } from '@/features/marketplace/product-images';
+import { addToCart, mergeCatalogProduct, toggleFavorite, useMarketplace } from '@/features/marketplace/store';
 import type { Product, ProductSpec, Review } from '@/features/marketplace/types';
 import { Button } from '@/shared/components/ui/button';
 import { Input } from '@/shared/components/ui/input';
@@ -151,7 +152,14 @@ function Gallery({
                 active && 'ring-2 ring-primary',
               )}
             >
-              <Image src={src} alt="" fill sizes="72px" className="object-cover" />
+              <Image
+                src={src}
+                alt=""
+                fill
+                sizes="72px"
+                className="object-cover"
+                unoptimized={src.endsWith('.svg')}
+              />
             </button>
           );
         })}
@@ -162,6 +170,7 @@ function Gallery({
             key={selected}
             src={selected}
             alt={name}
+            unoptimized={selected.endsWith('.svg')}
             fill
             priority={index === 0}
             sizes="(max-width: 1024px) 100vw, 28rem"
@@ -462,13 +471,20 @@ function RelatedList({ products }: { products: Product[] }) {
         Produtos relacionados
       </h2>
       <ul className="divide-y divide-border">
-        {products.map((item) => (
+        {products.map((item) => {
+          const cover = productCoverImage(item.images);
+          return (
           <li key={item.id}>
             <Link href={`/produto/${item.slug}`} className="flex gap-3 py-3">
               <span className="relative size-16 shrink-0 overflow-hidden rounded-xl bg-muted">
-                {item.images[0] ? (
-                  <Image src={item.images[0]} alt="" fill sizes="64px" className="object-cover" />
-                ) : null}
+                <Image
+                  src={cover}
+                  alt=""
+                  fill
+                  sizes="64px"
+                  className="object-cover"
+                  unoptimized={cover.endsWith('.svg')}
+                />
               </span>
               <span className="min-w-0 space-y-1">
                 <span className="line-clamp-2 text-sm font-medium">{item.name}</span>
@@ -482,7 +498,8 @@ function RelatedList({ products }: { products: Product[] }) {
               </span>
             </Link>
           </li>
-        ))}
+          );
+        })}
       </ul>
     </section>
   );
@@ -682,7 +699,14 @@ function Reviews({
                 className="relative size-24 shrink-0 overflow-hidden rounded-xl bg-muted ring-1 ring-border"
                 aria-label={`Ver imagem ${index + 1} na galeria`}
               >
-                <Image src={src} alt="" fill sizes="96px" className="object-cover" />
+                <Image
+                  src={src}
+                  alt=""
+                  fill
+                  sizes="96px"
+                  className="object-cover"
+                  unoptimized={src.endsWith('.svg')}
+                />
               </button>
             ))}
           </div>
@@ -740,16 +764,53 @@ function Reviews({
 
 export function ProductView({ slug }: { slug: string }) {
   const router = useRouter();
-  const { products, hydrated, favorites, addresses } = useMarketplace();
-  const product = getProductBySlug(slug);
+  const { products, catalogReady, favorites, addresses } = useMarketplace();
+  const listed = getProductBySlug(slug);
+  const [detail, setDetail] = useState<Product | null>(null);
+  const [reviews, setReviews] = useState<Review[]>([]);
+  const [detailLoading, setDetailLoading] = useState(true);
+  const product = detail ?? listed;
   const [quantity, setQuantity] = useState(1);
   const [imageIndex, setImageIndex] = useState(0);
-  const [variantId, setVariantId] = useState(product?.variants?.[0]?.id ?? '');
+  const [variantId, setVariantId] = useState('');
   const [question, setQuestion] = useState('');
   const [questions, setQuestions] = useState<AskedQuestion[]>([]);
   const [reviewSort, setReviewSort] = useState<'recentes' | 'nota'>('recentes');
 
-  if (!product && !hydrated) {
+  useEffect(() => {
+    let cancelled = false;
+    setDetailLoading(true);
+    setDetail(null);
+    setReviews([]);
+    setImageIndex(0);
+    setVariantId('');
+
+    fetchCatalogProduct(slug)
+      .then((data) => {
+        if (cancelled) return;
+        setDetail(data.product);
+        setReviews(data.reviews ?? []);
+        setVariantId(data.product.variants?.[0]?.id ?? '');
+        mergeCatalogProduct(data.product);
+      })
+      .catch(() => {
+        if (cancelled) return;
+        const fallback = getProductBySlug(slug);
+        if (fallback) {
+          setDetail(fallback);
+          setVariantId(fallback.variants?.[0]?.id ?? '');
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setDetailLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [slug]);
+
+  if ((!catalogReady && !product) || (detailLoading && !product)) {
     return (
       <div className="space-y-3" aria-hidden>
         <Skeleton className="aspect-square rounded-2xl" />
@@ -764,7 +825,7 @@ export function ProductView({ slug }: { slug: string }) {
       <EmptyState
         icon={ShieldCheck}
         title="Produto indisponível"
-        description="Esse anúncio não está no catálogo deste aparelho."
+        description="Esse anúncio não está no catálogo da loja."
         action={
           <Button asChild className="h-12 w-full" tooltip={false}>
             <Link href="/busca">Voltar para a busca</Link>
@@ -775,7 +836,6 @@ export function ProductView({ slug }: { slug: string }) {
   }
 
   const category = getCategory(product.categorySlug);
-  const reviews = REVIEWS.filter((review) => review.productId === product.id);
   const related = relatedProducts(product, products);
   const soldOut = product.stock <= 0;
   const saved = favorites.includes(product.id);

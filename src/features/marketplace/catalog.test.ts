@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it } from 'vitest';
 
 import {
   catalogFacets,
@@ -7,8 +7,10 @@ import {
   paginate,
   relatedCategories,
   resolveCart,
+  setCatalogData,
 } from '@/features/marketplace/catalog';
-import { PRODUCTS } from '@/features/marketplace/data';
+import { decimalToCents, mapStoreProductListItem, parseStock } from '@/features/marketplace/catalog-map';
+import { CATEGORIES, PRODUCTS } from '@/features/marketplace/data';
 import { countActiveFilters, readFilters } from '@/features/marketplace/filters';
 import {
   cartTotals,
@@ -16,6 +18,12 @@ import {
   formatPriceParam,
   parseReais,
 } from '@/features/marketplace/money';
+import { PRODUCT_IMAGE_FALLBACK, resolveProductImages } from '@/features/marketplace/product-images';
+import type { StoreProductListItem } from '@/features/marketplace/catalog-types';
+
+beforeEach(() => {
+  setCatalogData(PRODUCTS, CATEGORIES);
+});
 
 describe('catálogo', () => {
   it('deixa maiúscula só a primeira letra do termo', () => {
@@ -102,6 +110,44 @@ describe('catálogo', () => {
 
     expect(paginate(PRODUCTS, 99, 5).page).toBe(Math.ceil(PRODUCTS.length / 5));
     expect(paginate([], 1, 6)).toMatchObject({ items: [], page: 1, pages: 1, from: 0, to: 0 });
+  });
+});
+
+describe('mapeamento da API', () => {
+  const sample: StoreProductListItem = {
+    id: 'listing-1',
+    slug: 'produto-01',
+    featured: true,
+    name: 'Produto Marketplace 01',
+    photoUrl: null,
+    stockBalance: '11.0000',
+    group: { id: 'g1', name: 'Eletronicos' },
+    subgroup: { id: 's1', name: 'Smartphones' },
+    brand: { id: 'b1', name: 'TechNova' },
+    price: '23.40',
+    promotionalPrice: '19.89',
+    promotion: {
+      id: 'promo-1',
+      price: '19.89',
+      description: 'Promo seed 1',
+    },
+  };
+
+  it('converte preço decimal em centavos e estoque truncado', () => {
+    expect(decimalToCents('23.40')).toBe(2340);
+    expect(decimalToCents('19.89')).toBe(1989);
+    expect(parseStock('11.0000')).toBe(11);
+  });
+
+  it('usa placeholder quando photoUrl é nulo', () => {
+    expect(resolveProductImages(null)).toEqual([PRODUCT_IMAGE_FALLBACK]);
+    const mapped = mapStoreProductListItem(sample);
+    expect(mapped.images).toEqual([PRODUCT_IMAGE_FALLBACK]);
+    expect(mapped.price).toBe(1989);
+    expect(mapped.compareAtPrice).toBe(2340);
+    expect(mapped.categorySlug).toBe('eletronicos');
+    expect(mapped.featured).toBe(true);
+    expect(mapped.stock).toBe(11);
   });
 });
 

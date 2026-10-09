@@ -41,7 +41,8 @@ export function CatalogView({
   const params = useSearchParams();
   const pathname = usePathname();
   const router = useRouter();
-  const { products, favorites, recentQueries, hydrated } = useMarketplace();
+  const { products, favorites, recentQueries, hydrated, catalogReady, catalogError } =
+    useMarketplace();
 
   const q = params.get('q') ?? '';
   const filterKey = params.toString();
@@ -79,6 +80,36 @@ export function CatalogView({
   const searching = pathname === '/busca' && term.length > 0;
   const categories = searching ? relatedCategories(result) : [];
   const resultLabel = `${result.length} ${result.length === 1 ? 'resultado' : 'resultados'}`;
+
+  if (!catalogReady) {
+    const loading = (
+      <EmptyState
+        icon={Search}
+        title="Carregando catálogo"
+        description="Buscando produtos publicados na loja."
+      />
+    );
+    if (favoritesOnly) return loading;
+    return (
+      <ListingFrame
+        sidebar={
+          <FilterSidebar
+            products={[]}
+            heading={categorySlug ? title : 'Todas'}
+            scope={{ q, category: categorySlug, favoritesOnly, favoriteIds: favorites }}
+          />
+        }
+      >
+        {loading}
+      </ListingFrame>
+    );
+  }
+
+  if (catalogError && products.length === 0) {
+    return (
+      <EmptyState icon={Search} title="Catálogo indisponível" description={catalogError} />
+    );
+  }
 
   const listing = (
     <div className="space-y-4">

@@ -9,15 +9,25 @@ import {
   updateAddress,
 } from '@/features/marketplace/address-api';
 import { authFetch, toSessionUser, type AuthSessionResponse } from '@/features/marketplace/auth-api';
-import { catalogOf, getProductById } from '@/features/marketplace/catalog';
+import { fetchCatalogBootstrap } from '@/features/marketplace/catalog-api';
+import {
+  catalogOf,
+  categoriesOf,
+  getProductById,
+  isCatalogReady,
+  setCatalogData,
+  upsertCatalogProduct,
+} from '@/features/marketplace/catalog';
 import { DEMO_ORDERS } from '@/features/marketplace/data';
 import type {
   Address,
   AddressType,
   CartLine,
+  Category,
   Order,
   OrderStatus,
   PaymentMethod,
+  Product,
   SessionUser,
   UserReview,
 } from '@/features/marketplace/types';
@@ -37,6 +47,8 @@ type PersistedMarketplace = {
 
 export type MarketplaceState = PersistedMarketplace & {
   hydrated: boolean;
+  catalogReady: boolean;
+  catalogError: string | null;
 };
 
 const EMPTY: PersistedMarketplace = {
@@ -50,7 +62,12 @@ const EMPTY: PersistedMarketplace = {
   recentQueries: [],
 };
 
-const SERVER_STATE: MarketplaceState = { ...EMPTY, hydrated: false };
+const SERVER_STATE: MarketplaceState = {
+  ...EMPTY,
+  hydrated: false,
+  catalogReady: false,
+  catalogError: null,
+};
 
 let clientState: MarketplaceState = SERVER_STATE;
 const listeners = new Set<() => void>();
@@ -73,7 +90,7 @@ function persist(state: MarketplaceState) {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(rest));
 }
 
-function commit(patch: Partial<PersistedMarketplace>) {
+function commit(patch: Partial<PersistedMarketplace & Pick<MarketplaceState, 'catalogReady' | 'catalogError'>>) {
   clientState = { ...clientState, ...patch, hydrated: true };
   persist(clientState);
   emit();
@@ -105,6 +122,7 @@ function readStorage(): PersistedMarketplace | null {
 }
 
 let sessionSyncPromise: Promise<void> | null = null;
+let catalogSyncPromise: Promise<void> | null = null;
 
 export async function syncSessionFromServer() {
   try {
@@ -131,10 +149,28 @@ export async function syncSessionFromServer() {
   }
 }
 
+export async function syncCatalogFromServer() {
+  try {
+    const data = await fetchCatalogBootstrap();
+    setCatalogData(data.products, data.categories);
+    commit({ catalogReady: true, catalogError: null });
+  } catch (error) {
+    const message =
+      error instanceof Error ? error.message : 'Não foi possível carregar o catálogo.';
+    setCatalogData([], []);
+    commit({ catalogReady: true, catalogError: message });
+  }
+}
+
 export function hydrateMarketplace() {
   if (clientState.hydrated || typeof window === 'undefined') return;
   const stored = readStorage() ?? EMPTY;
-  clientState = { ...stored, hydrated: true };
+  clientState = {
+    ...stored,
+    hydrated: true,
+    catalogReady: isCatalogReady(),
+    catalogError: null,
+  };
   emit();
 
   if (!sessionSyncPromise) {
@@ -142,6 +178,22 @@ export function hydrateMarketplace() {
       sessionSyncPromise = null;
     });
   }
+
+  if (!catalogSyncPromise) {
+    catalogSyncPromise = syncCatalogFromServer().finally(() => {
+      catalogSyncPromise = null;
+    });
+  }
+}
+
+export function mergeCatalogProduct(product: Product, categories?: Category[]) {
+  upsertCatalogProduct(product);
+  if (categories?.length) {
+    const bySlug = new Map(categoriesOf().map((item) => [item.slug, item]));
+    for (const category of categories) bySlug.set(category.slug, category);
+    setCatalogData(catalogOf(), [...bySlug.values()]);
+  }
+  emit();
 }
 
 function withDemo(user: SessionUser, state: MarketplaceState): Partial<PersistedMarketplace> {
@@ -491,5 +543,7 @@ export function useMarketplace() {
   return {
     ...state,
     products: catalogOf(),
+    categories: categoriesOf(),
+    catalogReady: state.catalogReady || isCatalogReady(),
   };
 }

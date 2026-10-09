@@ -32,6 +32,7 @@ type GescomSuccessBody<T> = {
   success?: boolean;
   message: string;
   data: T;
+  pagination?: GescomPagination;
 };
 
 type GescomErrorBody = {
@@ -39,6 +40,18 @@ type GescomErrorBody = {
   code?: string;
   message?: string;
   details?: GescomDetail[];
+};
+
+export type GescomPagination = {
+  total: number;
+  limit: number;
+  offset: number;
+};
+
+export type GescomResult<T> = {
+  data: T;
+  message: string;
+  pagination?: GescomPagination;
 };
 
 function assertConfig() {
@@ -55,6 +68,13 @@ export function storePath(suffix: string) {
   return `/api/v1/store/${enterpriseId}/customers${suffix}`;
 }
 
+/** Rotas públicas da vitrine: `/api/v1/store/{enterpriseId}/...` */
+export function storeCatalogPath(suffix: string) {
+  assertConfig();
+  const path = suffix.startsWith('/') ? suffix : `/${suffix}`;
+  return `/api/v1/store/${enterpriseId}${path}`;
+}
+
 export function userPath(userId: string, suffix: string) {
   assertConfig();
   return `/api/v1/enterprises/${enterpriseId}/users/${userId}${suffix}`;
@@ -68,7 +88,7 @@ export function cepLookupPath(cepNumber: string) {
 export async function gescom<T>(
   path: string,
   init?: RequestInit,
-): Promise<{ data: T; message: string }> {
+): Promise<GescomResult<T>> {
   assertConfig();
 
   const controller = new AbortController();
@@ -108,6 +128,7 @@ export async function gescom<T>(
     return {
       data: body.data,
       message: body.message ?? 'OK',
+      ...(body.pagination ? { pagination: body.pagination } : {}),
     };
   } catch (error) {
     if (error instanceof GescomError) throw error;
@@ -124,7 +145,7 @@ export async function gescomAuthed<T>(
   path: string,
   init?: RequestInit,
   accessToken?: string,
-): Promise<{ data: T; message: string }> {
+): Promise<GescomResult<T>> {
   if (!accessToken) {
     throw new GescomError(401, 'UNAUTHENTICATED', 'Sessão expirada. Entre novamente.');
   }

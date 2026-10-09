@@ -21,7 +21,7 @@ export function jsonError(error: unknown) {
     );
   }
 
-  console.error('[api/conta]', error);
+  console.error('[api]', error);
   return NextResponse.json(
     {
       code: 'INTERNAL_ERROR',

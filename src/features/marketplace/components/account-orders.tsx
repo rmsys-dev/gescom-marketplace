@@ -16,7 +16,6 @@ import { toast } from 'sonner';
 
 import { getProductById } from '@/features/marketplace/catalog';
 import { EmptyState, STATUS_LABEL } from '@/features/marketplace/components/bits';
-import { CATEGORIES } from '@/features/marketplace/data';
 import { formatBRL } from '@/features/marketplace/money';
 import {
   createReviewHref,
@@ -87,7 +86,7 @@ function matchesDate(iso: string, filter: DateFilter) {
 }
 
 export function OrdersView() {
-  const { orders, reviews } = useMarketplace();
+  const { orders, reviews, categories } = useMarketplace();
   const [query, setQuery] = useState('');
   const [category, setCategory] = useState('');
   const [dateFilter, setDateFilter] = useState<DateFilter>('todas');
@@ -152,7 +151,7 @@ export function OrdersView() {
               className="min-w-(--radix-select-trigger-width)"
             >
               <SelectItem value="todas">Todas as categorias</SelectItem>
-              {CATEGORIES.map((item) => (
+              {categories.map((item) => (
                 <SelectItem key={item.slug} value={item.slug}>
                   {item.name}
                 </SelectItem>

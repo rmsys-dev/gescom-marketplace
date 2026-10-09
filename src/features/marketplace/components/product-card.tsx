@@ -9,6 +9,7 @@ import { toast } from 'sonner';
 import { Installments, Stars } from '@/features/marketplace/components/bits';
 import { CartAddedDialog } from '@/features/marketplace/components/cart-added-dialog';
 import { discountPercent, formatBRL } from '@/features/marketplace/money';
+import { productCoverImage } from '@/features/marketplace/product-images';
 import { addToCart, toggleFavorite, useMarketplace } from '@/features/marketplace/store';
 import type { Product } from '@/features/marketplace/types';
 import { cn } from '@/shared/lib/utils';
@@ -87,7 +88,7 @@ export function ProductCard({
 }) {
   const { favorites } = useMarketplace();
   const saved = favorites.includes(product.id);
-  const image = product.images[0];
+  const image = productCoverImage(product.images);
   const soldOut = product.stock <= 0;
   const onSale = discountPercent(product.price, product.compareAtPrice) !== null;
   const [cartDialogMounted, setCartDialogMounted] = useState(false);
@@ -127,9 +128,14 @@ export function ProductCard({
   return (
     <article className="group @container/card relative flex h-full w-full min-w-0 flex-col overflow-hidden rounded-2xl bg-card shadow-card ring-1 ring-border transition-[transform,box-shadow] duration-300 ease-out md:hover:z-20 md:hover:scale-[1.04] md:hover:shadow-[0_18px_40px_-8px_rgb(15_23_42/0.28)]">
       <div className="@container relative m-1.5 aspect-square overflow-hidden rounded-xl bg-muted @[15rem]/card:m-2">
-        {image ? (
-          <Image src={image} alt="" fill sizes={imageSizes} className="object-cover" />
-        ) : null}
+        <Image
+          src={image}
+          alt=""
+          fill
+          sizes={imageSizes}
+          className="object-cover"
+          unoptimized={image.endsWith('.svg')}
+        />
         <Link href={href} tabIndex={-1} aria-hidden="true" className="absolute inset-0" />
         {soldOut ? (
           <span className="absolute bottom-2 left-2 z-20 rounded-md bg-foreground/85 px-2 py-1 text-[11px] leading-none font-semibold text-background">
