@@ -2,11 +2,18 @@
 
 import { useEffect, useSyncExternalStore } from 'react';
 
+import {
+  createAddress,
+  deleteAddress,
+  fetchAddresses,
+  updateAddress,
+} from '@/features/marketplace/address-api';
+import { authFetch, toSessionUser, type AuthSessionResponse } from '@/features/marketplace/auth-api';
 import { catalogOf, getProductById } from '@/features/marketplace/catalog';
-import { DEMO_ADDRESS, DEMO_ORDERS } from '@/features/marketplace/data';
-import { nameFromEmail } from '@/features/marketplace/masks';
+import { DEMO_ORDERS } from '@/features/marketplace/data';
 import type {
   Address,
+  AddressType,
   CartLine,
   Order,
   OrderStatus,
@@ -97,27 +104,48 @@ function readStorage(): PersistedMarketplace | null {
   }
 }
 
+let sessionSyncPromise: Promise<void> | null = null;
+
+export async function syncSessionFromServer() {
+  try {
+    const data = await authFetch<AuthSessionResponse>('/api/conta/me');
+    const phone =
+      clientState.user?.email.toLowerCase() === (data.user.email ?? '').toLowerCase()
+        ? clientState.user.phone
+        : (clientState.lastUser?.email.toLowerCase() === (data.user.email ?? '').toLowerCase()
+            ? (clientState.lastUser?.phone ?? '')
+            : '');
+    const user = toSessionUser(data.user, phone);
+    commit({ ...withDemo(user, clientState), addresses: [] });
+    try {
+      await loadAddresses();
+    } catch {
+      // Mantém a sessão mesmo se a lista de endereços falhar.
+    }
+  } catch {
+    if (clientState.user) {
+      commit({ user: null, addresses: [] });
+    } else {
+      emit();
+    }
+  }
+}
+
 export function hydrateMarketplace() {
   if (clientState.hydrated || typeof window === 'undefined') return;
   const stored = readStorage() ?? EMPTY;
   clientState = { ...stored, hydrated: true };
-  if (stored.user) {
-    const demoPatch = withDemo(stored.user, clientState);
-    if (demoPatch.orders || demoPatch.addresses) {
-      commit(demoPatch);
-      return;
-    }
-  }
   emit();
+
+  if (!sessionSyncPromise) {
+    sessionSyncPromise = syncSessionFromServer().finally(() => {
+      sessionSyncPromise = null;
+    });
+  }
 }
 
 function withDemo(user: SessionUser, state: MarketplaceState): Partial<PersistedMarketplace> {
   const patch: Partial<PersistedMarketplace> = { user, lastUser: user };
-  if (state.addresses.length === 0) {
-    patch.addresses = [
-      { ...DEMO_ADDRESS, recipient: user.name, phone: user.phone || DEMO_ADDRESS.phone },
-    ];
-  }
   if (state.orders.length === 0) {
     patch.orders = DEMO_ORDERS.map((order) => ({
       ...order,
@@ -141,23 +169,33 @@ function withDemo(user: SessionUser, state: MarketplaceState): Partial<Persisted
   return patch;
 }
 
-export function login(email: string) {
-  const known =
-    clientState.lastUser?.email.toLowerCase() === email.toLowerCase() ? clientState.lastUser : null;
-  const user: SessionUser = known ?? {
-    name: nameFromEmail(email),
-    email,
-    phone: '',
-  };
-  commit(withDemo(user, clientState));
+export function setSessionUser(user: SessionUser) {
+  const knownPhone =
+    clientState.lastUser?.email.toLowerCase() === user.email.toLowerCase()
+      ? clientState.lastUser.phone
+      : '';
+  commit({
+    ...withDemo(
+      {
+        ...user,
+        phone: user.phone || knownPhone,
+      },
+      clientState,
+    ),
+    addresses: [],
+  });
+  void loadAddresses().catch(() => {
+    // Login já concluiu; a tela de endereços pode tentar de novo.
+  });
 }
 
-export function register(user: SessionUser) {
-  commit(withDemo(user, clientState));
-}
-
-export function logout() {
-  commit({ user: null });
+export async function logout() {
+  try {
+    await authFetch('/api/conta/logout', { method: 'POST' });
+  } catch {
+    // Limpa o estado local mesmo se a API falhar.
+  }
+  commit({ user: null, addresses: [] });
 }
 
 export function updateProfile(patch: Partial<SessionUser>) {
@@ -228,6 +266,75 @@ export function rememberQuery(query: string) {
   commit({ recentQueries });
 }
 
+export function setAddresses(addresses: Address[]) {
+  commit({ addresses });
+}
+
+export async function loadAddresses() {
+  const data = await fetchAddresses();
+  const profileName = data.user?.name ?? clientState.user?.name ?? '';
+  const profilePhone = data.user?.phone ?? clientState.user?.phone ?? '';
+  const addresses = data.addresses.map((item) => ({
+    ...item,
+    recipient: item.recipient || profileName,
+    phone: item.phone || profilePhone,
+  }));
+
+  const user = clientState.user
+    ? {
+        ...clientState.user,
+        name: profileName || clientState.user.name,
+        phone: profilePhone || clientState.user.phone,
+      }
+    : clientState.user;
+
+  commit({
+    addresses,
+    ...(user ? { user, lastUser: user } : {}),
+  });
+  return addresses;
+}
+
+export async function createUserAddress(input: {
+  cepNumber: string;
+  number: string;
+  complement?: string;
+  adressType: AddressType;
+}) {
+  const data = await createAddress(input);
+  const profileName = clientState.user?.name ?? '';
+  const profilePhone = clientState.user?.phone ?? '';
+  const addresses = data.addresses.map((item) => ({
+    ...item,
+    recipient: item.recipient || profileName,
+    phone: item.phone || profilePhone,
+  }));
+  commit({ addresses });
+  return data.address;
+}
+
+export async function updateUserAddress(
+  id: string,
+  input: {
+    cepNumber?: string;
+    number?: string;
+    complement?: string | null;
+    adressType?: AddressType;
+  },
+) {
+  const data = await updateAddress(id, input);
+  const profileName = clientState.user?.name ?? '';
+  const profilePhone = clientState.user?.phone ?? '';
+  const addresses = (data.addresses ?? []).map((item) => ({
+    ...item,
+    recipient: item.recipient || profileName,
+    phone: item.phone || profilePhone,
+  }));
+  commit({ addresses });
+  return data.address;
+}
+
+/** Compatível com checkout offline/guest; usuários logados devem preferir createUserAddress. */
 export function saveAddress(address: Address) {
   const exists = clientState.addresses.some((item) => item.id === address.id);
   commit({
@@ -237,7 +344,8 @@ export function saveAddress(address: Address) {
   });
 }
 
-export function removeAddress(id: string) {
+export async function removeAddress(id: string) {
+  await deleteAddress(id);
   commit({ addresses: clientState.addresses.filter((address) => address.id !== id) });
 }
 

@@ -64,13 +64,27 @@ export type CartLine = {
 };
 
 export type SessionUser = {
+  id?: string;
   name: string;
   email: string;
   phone: string;
+  registration?: string | null;
 };
+
+export type AddressType =
+  | 'PRINCIPAL'
+  | 'ENTREGA'
+  | 'COBRANCA'
+  | 'RESIDENCIAL'
+  | 'COMERCIAL'
+  | 'FATURAMENTO'
+  | 'SECUNDARIO'
+  | 'OUTRO';
 
 export type Address = {
   id: string;
+  cepId?: string;
+  adressType?: AddressType;
   label: string;
   recipient: string;
   phone: string;

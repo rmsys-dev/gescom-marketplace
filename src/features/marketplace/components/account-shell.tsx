@@ -129,7 +129,9 @@ function LogoutButton({ className }: { className?: string }) {
   return (
     <button
       type="button"
-      onClick={() => logout()}
+      onClick={() => {
+        void logout();
+      }}
       className={cn(
         'inline-flex min-h-11 items-center gap-3 rounded-lg px-3 text-sm text-muted-foreground transition-colors hover:bg-muted/70 hover:text-foreground',
         className,

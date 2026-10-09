@@ -6,8 +6,8 @@ import { Button } from '@/shared/components/ui/button';
 
 const POINTS: { icon: LucideIcon; text: string }[] = [
   { icon: Store, text: 'Vitrine, busca e filtros no mesmo lugar.' },
-  { icon: Smartphone, text: 'Conta e pedidos salvos neste navegador.' },
-  { icon: LockKeyhole, text: 'A senha só valida o formulário, sem servidor.' },
+  { icon: Smartphone, text: 'Conta protegida com confirmação de e-mail.' },
+  { icon: LockKeyhole, text: 'Sessão segura com tokens em cookies httpOnly.' },
 ];
 
 export function AuthShell({ backHref, children }: { backHref: string; children: React.ReactNode }) {
@@ -37,7 +37,7 @@ export function AuthShell({ backHref, children }: { backHref: string; children: 
         </Link>
         <div className="relative max-w-md space-y-8">
           <h2 className="font-poppins text-5xl leading-tight font-semibold tracking-tight">
-            A vitrine fica neste aparelho.
+            Sua conta nesta loja.
           </h2>
           <ul className="space-y-5">
             {POINTS.map((point) => (

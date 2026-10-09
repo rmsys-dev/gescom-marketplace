@@ -43,5 +43,6 @@ next-env.d.ts
 
 # docs
 docs/
+api-docs/
 
 

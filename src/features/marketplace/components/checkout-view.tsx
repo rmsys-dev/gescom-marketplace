@@ -2,12 +2,12 @@
 
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { z } from 'zod';
 
+import { AuthApiError, lookupCep } from '@/features/marketplace/address-api';
 import { resolveCart } from '@/features/marketplace/catalog';
 import { controlClass, Field } from '@/features/marketplace/components/bits';
-import { UF_OPTIONS } from '@/features/marketplace/data';
 import {
   maskCardNumber,
   maskExpiry,
@@ -18,7 +18,9 @@ import {
 import { cartTotals, formatBRL } from '@/features/marketplace/money';
 import { schedulePush } from '@/features/marketplace/navigate';
 import {
+  createUserAddress,
   getCheckoutProductIds,
+  loadAddresses,
   placeOrder,
   saveAddress,
   useMarketplace,
@@ -36,6 +38,7 @@ const contactSchema = z.object({
 });
 
 const addressSchema = z.object({
+  resolved: z.boolean().optional(),
   label: z.string().trim().min(2, 'Dê um nome ao endereço.'),
   recipient: z.string().trim().min(3, 'Informe quem recebe.'),
   phone: z
@@ -44,12 +47,12 @@ const addressSchema = z.object({
   zip: z
     .string()
     .refine((value) => onlyDigits(value).length === 8, 'Informe um CEP com 8 dígitos.'),
-  street: z.string().trim().min(3, 'Informe a rua.'),
+  street: z.string().trim().min(1, 'Consulte o CEP para preencher a rua.'),
   number: z.string().trim().min(1, 'Informe o número.'),
   complement: z.string(),
-  district: z.string().trim().min(2, 'Informe o bairro.'),
-  city: z.string().trim().min(2, 'Informe a cidade.'),
-  state: z.string().length(2, 'Escolha a UF.'),
+  district: z.string().trim().min(1, 'Consulte o CEP para preencher o bairro.'),
+  city: z.string().trim().min(1, 'Consulte o CEP para preencher a cidade.'),
+  state: z.string().length(2, 'Consulte o CEP para preencher a UF.'),
 });
 
 const cardSchema = z.object({
@@ -63,7 +66,8 @@ type Contact = z.infer<typeof contactSchema>;
 type AddressDraft = z.infer<typeof addressSchema>;
 
 const EMPTY_ADDRESS: AddressDraft = {
-  label: 'Casa',
+  resolved: false,
+  label: 'Entrega',
   recipient: '',
   phone: '',
   zip: '',
@@ -135,6 +139,18 @@ function CheckoutReady() {
   const [payment, setPayment] = useState<PaymentMethod>('pix');
   const [card, setCard] = useState({ number: '', name: '', expiry: '', cvv: '' });
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [savingAddress, setSavingAddress] = useState(false);
+
+  useEffect(() => {
+    if (!user?.id) return;
+    void loadAddresses()
+      .then((items) => {
+        if (items[0]?.id) setSelectedAddressId(items[0].id);
+      })
+      .catch(() => {
+        // Checkout segue; o usuário pode cadastrar/selecionar endereço depois.
+      });
+  }, [user?.id]);
 
   if (lines.length === 0) {
     return (
@@ -170,16 +186,55 @@ function CheckoutReady() {
       setErrors(issuesOf(parsed.error));
       return null;
     }
+    if (user && !parsed.data.resolved) {
+      setErrors({ zip: 'Consulte um CEP válido antes de continuar.' });
+      return null;
+    }
     setErrors({});
-    return { ...parsed.data, id: newId('addr') };
+    return {
+      ...parsed.data,
+      id: newId('addr'),
+      adressType: 'ENTREGA',
+    };
   }
 
-  function goNext() {
+  async function goNext() {
     if (current === 'contato' && !validateContact()) return;
     if (current === 'entrega') {
       const nextAddress = chosenAddress();
       if (!nextAddress) return;
-      if (selectedAddressId === 'new' && user && saveForLater) saveAddress(nextAddress);
+      if (selectedAddressId === 'new' && user && saveForLater) {
+        const cepNumber = onlyDigits(nextAddress.zip);
+        if (cepNumber.length !== 8) {
+          setErrors({ zip: 'Consulte um CEP válido antes de salvar.' });
+          return;
+        }
+        setSavingAddress(true);
+        try {
+          const created = await createUserAddress({
+            cepNumber,
+            number: nextAddress.number,
+            complement: nextAddress.complement || undefined,
+            adressType: addresses.some((item) => item.adressType === 'PRINCIPAL')
+              ? 'ENTREGA'
+              : 'PRINCIPAL',
+          });
+          if (created?.id) setSelectedAddressId(created.id);
+        } catch (error) {
+          setErrors({
+            zip:
+              error instanceof AuthApiError
+                ? error.message
+                : 'Não foi possível salvar o endereço na conta.',
+          });
+          setSavingAddress(false);
+          return;
+        } finally {
+          setSavingAddress(false);
+        }
+      } else if (selectedAddressId === 'new' && !user) {
+        saveAddress(nextAddress);
+      }
     }
     if (current === 'pagamento' && payment === 'credito') {
       const parsed = cardSchema.safeParse(card);
@@ -303,7 +358,9 @@ function CheckoutReady() {
         <section className="space-y-4">
           <h2 className="text-lg font-semibold">Onde entregar</h2>
           <p className="text-sm text-muted-foreground">
-            O CEP não consulta um serviço externo. Preencha o endereço completo.
+            {user
+              ? 'Digite o CEP para preencher o endereço automaticamente.'
+              : 'Informe o endereço completo para a entrega.'}
           </p>
           {user && addresses.length > 0 ? (
             <div className="space-y-2" role="radiogroup" aria-label="Endereços salvos">
@@ -344,7 +401,12 @@ function CheckoutReady() {
             </div>
           ) : null}
           {selectedAddressId === 'new' || addresses.length === 0 ? (
-            <AddressFields value={address} errors={errors} onChange={setAddress} />
+            <AddressFields
+              value={address}
+              errors={errors}
+              requireCepLookup={Boolean(user)}
+              onChange={setAddress}
+            />
           ) : null}
           {user && selectedAddressId === 'new' ? (
             <label className="flex min-h-11 items-center gap-2 text-sm">
@@ -506,8 +568,16 @@ function CheckoutReady() {
               Confirmar pedido · {formatBRL(totals.total)}
             </Button>
           ) : (
-            <Button type="button" className="h-12 flex-1" tooltip={false} onClick={goNext}>
-              Continuar
+            <Button
+              type="button"
+              className="h-12 flex-1"
+              tooltip={false}
+              disabled={savingAddress}
+              onClick={() => {
+                void goNext();
+              }}
+            >
+              {savingAddress ? 'Salvando…' : 'Continuar'}
             </Button>
           )}
         </div>
@@ -519,32 +589,58 @@ function CheckoutReady() {
 function AddressFields({
   value,
   errors,
+  requireCepLookup,
   onChange,
 }: {
   value: AddressDraft;
   errors: Record<string, string>;
+  requireCepLookup: boolean;
   onChange: (value: AddressDraft) => void;
 }) {
+  const [lookingUp, setLookingUp] = useState(false);
+  const [cepError, setCepError] = useState('');
+
   function set<K extends keyof AddressDraft>(key: K, next: AddressDraft[K]) {
     onChange({ ...value, [key]: next });
   }
 
+  async function resolveCep(rawZip: string) {
+    if (!requireCepLookup) return;
+    const digits = onlyDigits(rawZip);
+    if (digits.length !== 8) return;
+    setLookingUp(true);
+    setCepError('');
+    try {
+      const data = await lookupCep(digits);
+      onChange({
+        ...value,
+        resolved: true,
+        zip: maskZip(data.cepNumber),
+        street: data.address,
+        district: data.neighborhood,
+        city: data.cityName,
+        state: data.uf,
+      });
+    } catch (error) {
+      onChange({
+        ...value,
+        resolved: false,
+        zip: maskZip(digits),
+        street: '',
+        district: '',
+        city: '',
+        state: '',
+      });
+      setCepError(
+        error instanceof AuthApiError ? error.message : 'Não foi possível consultar o CEP.',
+      );
+    } finally {
+      setLookingUp(false);
+    }
+  }
+
   return (
     <div className="space-y-4">
-      <Field
-        label="Identificação"
-        htmlFor="addr-label"
-        error={errors.label}
-        hint="Ex.: Casa, Trabalho"
-      >
-        <input
-          id="addr-label"
-          className={controlClass}
-          value={value.label}
-          aria-invalid={Boolean(errors.label)}
-          onChange={(event) => set('label', event.target.value)}
-        />
-      </Field>
       <Field label="Destinatário" htmlFor="addr-recipient" error={errors.recipient}>
         <input
           id="addr-recipient"
@@ -566,15 +662,37 @@ function AddressFields({
           onChange={(event) => set('phone', maskPhone(event.target.value))}
         />
       </Field>
-      <Field label="CEP" htmlFor="addr-zip" error={errors.zip}>
+      <Field
+        label="CEP"
+        htmlFor="addr-zip"
+        error={errors.zip || cepError}
+        hint={
+          lookingUp
+            ? 'Consultando CEP…'
+            : requireCepLookup
+              ? 'Ao completar 8 dígitos, buscamos o endereço.'
+              : undefined
+        }
+      >
         <input
           id="addr-zip"
           inputMode="numeric"
           autoComplete="postal-code"
           className={controlClass}
           value={value.zip}
-          aria-invalid={Boolean(errors.zip)}
-          onChange={(event) => set('zip', maskZip(event.target.value))}
+          aria-invalid={Boolean(errors.zip || cepError)}
+          onChange={(event) => {
+            const next = maskZip(event.target.value);
+            setCepError('');
+            onChange({
+              ...value,
+              zip: next,
+              resolved: requireCepLookup ? false : value.resolved,
+            });
+            if (requireCepLookup && onlyDigits(next).length === 8) {
+              void resolveCep(next);
+            }
+          }}
         />
       </Field>
       <Field label="Rua" htmlFor="addr-street" error={errors.street}>
@@ -583,6 +701,7 @@ function AddressFields({
           autoComplete="address-line1"
           className={controlClass}
           value={value.street}
+          readOnly={requireCepLookup}
           aria-invalid={Boolean(errors.street)}
           onChange={(event) => set('street', event.target.value)}
         />
@@ -611,6 +730,7 @@ function AddressFields({
           id="addr-district"
           className={controlClass}
           value={value.district}
+          readOnly={requireCepLookup}
           aria-invalid={Boolean(errors.district)}
           onChange={(event) => set('district', event.target.value)}
         />
@@ -622,25 +742,21 @@ function AddressFields({
             autoComplete="address-level2"
             className={controlClass}
             value={value.city}
+            readOnly={requireCepLookup}
             aria-invalid={Boolean(errors.city)}
             onChange={(event) => set('city', event.target.value)}
           />
         </Field>
         <Field label="UF" htmlFor="addr-state" error={errors.state}>
-          <select
+          <input
             id="addr-state"
             className={controlClass}
             value={value.state}
+            readOnly={requireCepLookup}
+            maxLength={2}
             aria-invalid={Boolean(errors.state)}
-            onChange={(event) => set('state', event.target.value)}
-          >
-            <option value="">UF</option>
-            {UF_OPTIONS.map((uf) => (
-              <option key={uf} value={uf}>
-                {uf}
-              </option>
-            ))}
-          </select>
+            onChange={(event) => set('state', event.target.value.toUpperCase())}
+          />
         </Field>
       </div>
     </div>

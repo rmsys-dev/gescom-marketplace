@@ -42,7 +42,7 @@ export function AccountGate({ children }: { children: React.ReactNode }) {
         <EmptyState
           icon={UserRound}
           title="Entre para continuar"
-          description="A conta fica neste aparelho. Use um e-mail válido e uma senha com 6 caracteres ou mais."
+          description="Entre com e-mail ou CPF/CNPJ e a senha da conta desta loja."
           action={
             <Button asChild className="h-12 w-full" tooltip={false}>
               <Link href="/entrar">Entrar</Link>
