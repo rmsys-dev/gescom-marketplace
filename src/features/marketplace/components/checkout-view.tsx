@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
 import { z } from 'zod';
 
-import { AuthApiError, lookupCep } from '@/features/marketplace/address-api';
+import { AuthApiError, lookupCep, type ViaCepAddress } from '@/features/marketplace/address-api';
 import { resolveCart } from '@/features/marketplace/catalog';
 import { controlClass, Field } from '@/features/marketplace/components/bits';
 import {
@@ -47,10 +47,10 @@ const addressSchema = z.object({
   zip: z
     .string()
     .refine((value) => onlyDigits(value).length === 8, 'Informe um CEP com 8 dígitos.'),
-  street: z.string().trim().min(1, 'Consulte o CEP para preencher a rua.'),
+  street: z.string().trim().min(1, 'Informe a rua.'),
   number: z.string().trim().min(1, 'Informe o número.'),
   complement: z.string(),
-  district: z.string().trim().min(1, 'Consulte o CEP para preencher o bairro.'),
+  district: z.string().trim().min(1, 'Informe o bairro.'),
   city: z.string().trim().min(1, 'Consulte o CEP para preencher a cidade.'),
   state: z.string().length(2, 'Consulte o CEP para preencher a UF.'),
 });
@@ -63,10 +63,13 @@ const cardSchema = z.object({
 });
 
 type Contact = z.infer<typeof contactSchema>;
-type AddressDraft = z.infer<typeof addressSchema>;
+type AddressDraft = z.infer<typeof addressSchema> & {
+  viaCep: ViaCepAddress | null;
+};
 
 const EMPTY_ADDRESS: AddressDraft = {
   resolved: false,
+  viaCep: null,
   label: 'Entrega',
   recipient: '',
   phone: '',
@@ -209,12 +212,20 @@ function CheckoutReady() {
           setErrors({ zip: 'Consulte um CEP válido antes de salvar.' });
           return;
         }
+        if (!address.viaCep) {
+          setErrors({ zip: 'Consulte um CEP válido antes de salvar.' });
+          return;
+        }
         setSavingAddress(true);
         try {
           const created = await createUserAddress({
-            cepNumber,
+            viaCep: {
+              ...address.viaCep,
+              logradouro: nextAddress.street.trim(),
+              bairro: nextAddress.district.trim(),
+              complemento: nextAddress.complement.trim(),
+            },
             number: nextAddress.number,
-            complement: nextAddress.complement || undefined,
             adressType: addresses.some((item) => item.adressType === 'PRINCIPAL')
               ? 'ENTREGA'
               : 'PRINCIPAL',
@@ -224,7 +235,9 @@ function CheckoutReady() {
           setErrors({
             zip:
               error instanceof AuthApiError
-                ? error.message
+                ? error.code === 'USER_ADDRESS_DUPLICATE'
+                  ? 'Esse endereço já está cadastrado. Selecione-o na lista ou altere número/tipo.'
+                  : error.message
                 : 'Não foi possível salvar o endereço na conta.',
           });
           setSavingAddress(false);
@@ -595,13 +608,14 @@ function AddressFields({
   value: AddressDraft;
   errors: Record<string, string>;
   requireCepLookup: boolean;
-  onChange: (value: AddressDraft) => void;
+  onChange: (value: AddressDraft | ((current: AddressDraft) => AddressDraft)) => void;
 }) {
   const [lookingUp, setLookingUp] = useState(false);
   const [cepError, setCepError] = useState('');
+  const addressLocked = requireCepLookup && !value.resolved;
 
   function set<K extends keyof AddressDraft>(key: K, next: AddressDraft[K]) {
-    onChange({ ...value, [key]: next });
+    onChange((current) => ({ ...current, [key]: next }));
   }
 
   async function resolveCep(rawZip: string) {
@@ -612,24 +626,33 @@ function AddressFields({
     setCepError('');
     try {
       const data = await lookupCep(digits);
-      onChange({
-        ...value,
-        resolved: true,
-        zip: maskZip(data.cepNumber),
-        street: data.address,
-        district: data.neighborhood,
-        city: data.cityName,
-        state: data.uf,
+      onChange((current) => {
+        if (onlyDigits(current.zip) !== digits) return current;
+        return {
+          ...current,
+          resolved: true,
+          viaCep: data,
+          zip: maskZip(data.cep),
+          street: data.logradouro,
+          district: data.bairro,
+          city: data.localidade,
+          state: data.uf,
+          complement: current.complement.trim() ? current.complement : data.complemento,
+        };
       });
     } catch (error) {
-      onChange({
-        ...value,
-        resolved: false,
-        zip: maskZip(digits),
-        street: '',
-        district: '',
-        city: '',
-        state: '',
+      onChange((current) => {
+        if (onlyDigits(current.zip) !== digits) return current;
+        return {
+          ...current,
+          resolved: false,
+          viaCep: null,
+          zip: maskZip(digits),
+          street: '',
+          district: '',
+          city: '',
+          state: '',
+        };
       });
       setCepError(
         error instanceof AuthApiError ? error.message : 'Não foi possível consultar o CEP.',
@@ -645,6 +668,7 @@ function AddressFields({
         <input
           id="addr-recipient"
           autoComplete="name"
+          placeholder="Nome de quem recebe"
           className={controlClass}
           value={value.recipient}
           aria-invalid={Boolean(errors.recipient)}
@@ -656,6 +680,7 @@ function AddressFields({
           id="addr-phone"
           inputMode="tel"
           autoComplete="tel"
+          placeholder="(00) 00000-0000"
           className={controlClass}
           value={value.phone}
           aria-invalid={Boolean(errors.phone)}
@@ -670,7 +695,9 @@ function AddressFields({
           lookingUp
             ? 'Consultando CEP…'
             : requireCepLookup
-              ? 'Ao completar 8 dígitos, buscamos o endereço.'
+              ? value.resolved
+                ? 'CEP encontrado. Confira e complete o endereço.'
+                : 'Os campos do endereço são liberados depois da consulta do CEP.'
               : undefined
         }
       >
@@ -678,17 +705,21 @@ function AddressFields({
           id="addr-zip"
           inputMode="numeric"
           autoComplete="postal-code"
+          placeholder="00000-000"
           className={controlClass}
           value={value.zip}
           aria-invalid={Boolean(errors.zip || cepError)}
           onChange={(event) => {
             const next = maskZip(event.target.value);
             setCepError('');
-            onChange({
-              ...value,
+            onChange((current) => ({
+              ...current,
               zip: next,
-              resolved: requireCepLookup ? false : value.resolved,
-            });
+              resolved: requireCepLookup ? false : current.resolved,
+              ...(requireCepLookup
+                ? { viaCep: null, street: '', district: '', city: '', state: '' }
+                : {}),
+            }));
             if (requireCepLookup && onlyDigits(next).length === 8) {
               void resolveCep(next);
             }
@@ -699,9 +730,10 @@ function AddressFields({
         <input
           id="addr-street"
           autoComplete="address-line1"
+          placeholder="Nome da rua"
           className={controlClass}
           value={value.street}
-          readOnly={requireCepLookup}
+          disabled={addressLocked}
           aria-invalid={Boolean(errors.street)}
           onChange={(event) => set('street', event.target.value)}
         />
@@ -710,8 +742,10 @@ function AddressFields({
         <Field label="Número" htmlFor="addr-number" error={errors.number}>
           <input
             id="addr-number"
+            placeholder="Nº"
             className={controlClass}
             value={value.number}
+            disabled={addressLocked}
             aria-invalid={Boolean(errors.number)}
             onChange={(event) => set('number', event.target.value)}
           />
@@ -719,8 +753,10 @@ function AddressFields({
         <Field label="Complemento" htmlFor="addr-complement" error={errors.complement}>
           <input
             id="addr-complement"
+            placeholder="Apto, bloco, sala…"
             className={controlClass}
             value={value.complement}
+            disabled={addressLocked}
             onChange={(event) => set('complement', event.target.value)}
           />
         </Field>
@@ -728,9 +764,10 @@ function AddressFields({
       <Field label="Bairro" htmlFor="addr-district" error={errors.district}>
         <input
           id="addr-district"
+          placeholder="Bairro"
           className={controlClass}
           value={value.district}
-          readOnly={requireCepLookup}
+          disabled={addressLocked}
           aria-invalid={Boolean(errors.district)}
           onChange={(event) => set('district', event.target.value)}
         />
@@ -740,8 +777,10 @@ function AddressFields({
           <input
             id="addr-city"
             autoComplete="address-level2"
+            placeholder="Cidade"
             className={controlClass}
             value={value.city}
+            disabled={addressLocked}
             readOnly={requireCepLookup}
             aria-invalid={Boolean(errors.city)}
             onChange={(event) => set('city', event.target.value)}
@@ -750,8 +789,10 @@ function AddressFields({
         <Field label="UF" htmlFor="addr-state" error={errors.state}>
           <input
             id="addr-state"
+            placeholder="UF"
             className={controlClass}
             value={value.state}
+            disabled={addressLocked}
             readOnly={requireCepLookup}
             maxLength={2}
             aria-invalid={Boolean(errors.state)}

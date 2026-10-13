@@ -80,9 +80,10 @@ export function userPath(userId: string, suffix: string) {
   return `/api/v1/enterprises/${enterpriseId}/users/${userId}${suffix}`;
 }
 
-export function cepLookupPath(cepNumber: string) {
-  const digits = cepNumber.replace(/\D/g, '');
-  return `/api/v1/addresses/ceps/lookup/${digits}`;
+/** Endereços do cliente logado (sem tenant na URL). */
+export function addressesPath(addressId?: string) {
+  const base = '/api/v1/addresses';
+  return addressId ? `${base}/${addressId}` : base;
 }
 
 export async function gescom<T>(path: string, init?: RequestInit): Promise<GescomResult<T>> {

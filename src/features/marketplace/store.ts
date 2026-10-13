@@ -7,6 +7,7 @@ import {
   deleteAddress,
   fetchAddresses,
   updateAddress,
+  type ViaCepAddress,
 } from '@/features/marketplace/address-api';
 import { authFetch, toSessionUser, type AuthSessionResponse } from '@/features/marketplace/auth-api';
 import { fetchCatalogBootstrap } from '@/features/marketplace/catalog-api';
@@ -363,9 +364,8 @@ export async function loadAddresses() {
 }
 
 export async function createUserAddress(input: {
-  cepNumber: string;
+  viaCep: ViaCepAddress;
   number: string;
-  complement?: string;
   adressType: AddressType;
 }) {
   const data = await createAddress(input);
@@ -383,10 +383,9 @@ export async function createUserAddress(input: {
 export async function updateUserAddress(
   id: string,
   input: {
-    cepNumber?: string;
-    number?: string;
-    complement?: string | null;
-    adressType?: AddressType;
+    viaCep: ViaCepAddress;
+    number: string;
+    adressType: AddressType;
   },
 ) {
   const data = await updateAddress(id, input);

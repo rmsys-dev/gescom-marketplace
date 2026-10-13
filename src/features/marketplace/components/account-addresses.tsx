@@ -5,7 +5,7 @@ import { startTransition, useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import { z } from 'zod';
 
-import { AuthApiError, lookupCep } from '@/features/marketplace/address-api';
+import { AuthApiError, lookupCep, type ViaCepAddress } from '@/features/marketplace/address-api';
 import { EmptyState, Field } from '@/features/marketplace/components/bits';
 import { maskZip, onlyDigits } from '@/features/marketplace/masks';
 import {
@@ -51,7 +51,6 @@ const fieldInputClass = 'h-12 px-3 text-base md:text-base';
 const ADDRESS_TYPES: { value: AddressType; label: string }[] = [
   { value: 'PRINCIPAL', label: 'Principal' },
   { value: 'ENTREGA', label: 'Entrega' },
-  { value: 'COBRANCA', label: 'Cobrança' },
   { value: 'RESIDENCIAL', label: 'Residencial' },
   { value: 'COMERCIAL', label: 'Comercial' },
   { value: 'OUTRO', label: 'Outro' },
@@ -59,6 +58,7 @@ const ADDRESS_TYPES: { value: AddressType; label: string }[] = [
 
 type AddressDraft = {
   resolved: boolean;
+  viaCep: ViaCepAddress | null;
   adressType: AddressType;
   zip: string;
   street: string;
@@ -71,6 +71,7 @@ type AddressDraft = {
 
 const EMPTY_DRAFT: AddressDraft = {
   resolved: false,
+  viaCep: null,
   adressType: 'ENTREGA',
   zip: '',
   street: '',
@@ -98,10 +99,10 @@ const addressSchema = z.object({
   zip: z
     .string()
     .refine((value) => onlyDigits(value).length === 8, 'Informe um CEP com 8 dígitos.'),
-  street: z.string().trim().min(1, 'Consulte o CEP para preencher a rua.'),
+  street: z.string().trim().min(1, 'Informe a rua.'),
   number: z.string().trim().min(1, 'Informe o número.').max(255),
   complement: z.string().max(255),
-  district: z.string().trim().min(1, 'Consulte o CEP para preencher o bairro.'),
+  district: z.string().trim().min(1, 'Informe o bairro.'),
   city: z.string().trim().min(1, 'Consulte o CEP para preencher a cidade.'),
   state: z.string().length(2, 'Consulte o CEP para preencher a UF.'),
 });
@@ -130,7 +131,8 @@ function formatCityLine(address: Address) {
 function draftFrom(editing: Address | null, hasPrincipal: boolean): AddressDraft {
   if (editing) {
     return {
-      resolved: onlyDigits(editing.zip).length === 8 && Boolean(editing.street),
+      resolved: false,
+      viaCep: null,
       adressType: editing.adressType ?? 'ENTREGA',
       zip: editing.zip,
       street: editing.street,
@@ -358,8 +360,65 @@ function AddressDialog({
   const [form, setForm] = useState<AddressDraft>(() => draftFrom(editing, hasPrincipal));
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [formError, setFormError] = useState('');
-  const [lookingUp, setLookingUp] = useState(false);
+  const [lookingUp, setLookingUp] = useState(
+    () => Boolean(editing && onlyDigits(editing.zip).length === 8),
+  );
   const [pending, setPending] = useState(false);
+  const addressLocked = !form.resolved;
+
+  useEffect(() => {
+    if (!editing) return;
+    const digits = onlyDigits(editing.zip);
+    if (digits.length !== 8) return;
+
+    let cancelled = false;
+    setLookingUp(true);
+    void lookupCep(digits)
+      .then((data) => {
+        if (cancelled) return;
+        setForm((current) => {
+          if (onlyDigits(current.zip) !== digits) return current;
+          return {
+            ...current,
+            resolved: true,
+            viaCep: data,
+            zip: maskZip(data.cep),
+            state: data.uf || current.state,
+            city: current.city || data.localidade,
+            street: current.street || data.logradouro,
+            district: current.district || data.bairro,
+            complement: current.complement.trim() ? current.complement : data.complemento,
+          };
+        });
+        setErrors((current) => {
+          const next = { ...current };
+          delete next.zip;
+          delete next.resolved;
+          return next;
+        });
+      })
+      .catch((error) => {
+        if (cancelled) return;
+        setForm((current) => {
+          if (onlyDigits(current.zip) !== digits) return current;
+          return { ...current, resolved: false, viaCep: null };
+        });
+        setErrors((current) => ({
+          ...current,
+          zip:
+            error instanceof AuthApiError
+              ? error.message
+              : 'Não foi possível consultar o CEP.',
+        }));
+      })
+      .finally(() => {
+        if (!cancelled) setLookingUp(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [editing]);
 
   function set<K extends keyof AddressDraft>(key: K, next: AddressDraft[K]) {
     setForm((current) => ({ ...current, [key]: next }));
@@ -379,15 +438,20 @@ function AddressDialog({
     setFormError('');
     try {
       const data = await lookupCep(digits);
-      setForm((current) => ({
-        ...current,
-        resolved: true,
-        zip: maskZip(data.cepNumber),
-        street: data.address,
-        district: data.neighborhood,
-        city: data.cityName,
-        state: data.uf,
-      }));
+      setForm((current) => {
+        if (onlyDigits(current.zip) !== digits) return current;
+        return {
+          ...current,
+          resolved: true,
+          viaCep: data,
+          zip: maskZip(data.cep),
+          street: data.logradouro,
+          district: data.bairro,
+          city: data.localidade,
+          state: data.uf,
+          complement: current.complement.trim() ? current.complement : data.complemento,
+        };
+      });
       setErrors((current) => {
         const next = { ...current };
         delete next.zip;
@@ -399,14 +463,18 @@ function AddressDialog({
         return next;
       });
     } catch (error) {
-      setForm((current) => ({
-        ...current,
-        resolved: false,
-        street: '',
-        district: '',
-        city: '',
-        state: '',
-      }));
+      setForm((current) => {
+        if (onlyDigits(current.zip) !== digits) return current;
+        return {
+          ...current,
+          resolved: false,
+          viaCep: null,
+          street: '',
+          district: '',
+          city: '',
+          state: '',
+        };
+      });
       setErrors((current) => ({
         ...current,
         zip:
@@ -428,22 +496,31 @@ function AddressDialog({
       return;
     }
 
-    const cepNumber = onlyDigits(parsed.data.zip);
+    if (!form.viaCep) {
+      setErrors({ zip: 'Consulte um CEP válido antes de salvar.' });
+      return;
+    }
+
+    const viaCep = {
+      ...form.viaCep,
+      logradouro: parsed.data.street.trim(),
+      bairro: parsed.data.district.trim(),
+      complemento: parsed.data.complement.trim(),
+    };
+
     setPending(true);
     try {
       if (editing) {
         await updateUserAddress(editing.id, {
-          cepNumber,
+          viaCep,
           number: parsed.data.number,
-          complement: parsed.data.complement || null,
           adressType: parsed.data.adressType,
         });
         toast.success('Endereço atualizado.');
       } else {
         await createUserAddress({
-          cepNumber,
+          viaCep,
           number: parsed.data.number,
-          complement: parsed.data.complement || undefined,
           adressType: parsed.data.adressType,
         });
         toast.success('Endereço salvo na sua conta.');
@@ -453,6 +530,8 @@ function AddressDialog({
       if (error instanceof AuthApiError) {
         if (error.code === 'USER_ADDRESS_PRINCIPAL_ALREADY_EXISTS') {
           setFormError('Já existe um endereço principal. Escolha outro tipo ou edite o atual.');
+        } else if (error.code === 'USER_ADDRESS_DUPLICATE') {
+          setFormError('Esse endereço já está cadastrado (mesmo CEP, número, complemento e tipo).');
         } else {
           setFormError(error.message);
         }
@@ -481,7 +560,8 @@ function AddressDialog({
         <DialogHeader className="shrink-0 px-4 pt-3 pb-1 text-left md:px-6 md:pt-6">
           <DialogTitle>{editing ? 'Editar endereço' : 'Novo endereço'}</DialogTitle>
           <DialogDescription>
-            Digite o CEP para preencher rua, bairro, cidade e UF automaticamente.
+            Digite o CEP. Rua, número, complemento e bairro são liberados depois que a consulta
+            retornar.
           </DialogDescription>
         </DialogHeader>
 
@@ -516,7 +596,7 @@ function AddressDialog({
                       'data-[size=default]:h-12 dark:hover:bg-transparent',
                     )}
                   >
-                    <SelectValue placeholder="Tipo" />
+                    <SelectValue placeholder="Selecione o tipo" />
                   </SelectTrigger>
                   <SelectContent>
                     {ADDRESS_TYPES.map((type) => (
@@ -539,19 +619,41 @@ function AddressDialog({
                 label="CEP"
                 htmlFor="addr-zip"
                 error={errors.zip || errors.resolved}
-                hint={lookingUp ? 'Consultando CEP…' : 'Ao completar 8 dígitos, buscamos o endereço.'}
+                hint={
+                  lookingUp
+                    ? 'Consultando CEP…'
+                    : form.resolved
+                      ? 'CEP encontrado. Confira e complete o endereço.'
+                      : 'Os campos do endereço são liberados depois da consulta do CEP.'
+                }
               >
                 <Input
                   id="addr-zip"
                   inputMode="numeric"
                   autoComplete="postal-code"
+                  placeholder="00000-000"
                   className={fieldInputClass}
                   value={form.zip}
                   aria-invalid={Boolean(errors.zip || errors.resolved)}
                   onChange={(event) => {
                     const next = maskZip(event.target.value);
-                    set('zip', next);
-                    set('resolved', false);
+                    setForm((current) => ({
+                      ...current,
+                      zip: next,
+                      resolved: false,
+                      viaCep: null,
+                      street: '',
+                      district: '',
+                      city: '',
+                      state: '',
+                    }));
+                    setErrors((current) => {
+                      if (!current.zip && !current.resolved) return current;
+                      const copy = { ...current };
+                      delete copy.zip;
+                      delete copy.resolved;
+                      return copy;
+                    });
                     if (onlyDigits(next).length === 8) {
                       void resolveCep(next);
                     }
@@ -568,10 +670,13 @@ function AddressDialog({
                   <Input
                     id="addr-street"
                     autoComplete="address-line1"
+                    placeholder="Nome da rua"
                     className={fieldInputClass}
                     value={form.street}
-                    readOnly
+                    disabled={addressLocked}
+                    readOnly={Boolean(editing)}
                     aria-invalid={Boolean(errors.street)}
+                    onChange={(event) => set('street', event.target.value)}
                   />
                 </Field>
               </div>
@@ -579,8 +684,10 @@ function AddressDialog({
                 <Field label="Número" htmlFor="addr-number" error={errors.number}>
                   <Input
                     id="addr-number"
+                    placeholder="Nº"
                     className={fieldInputClass}
                     value={form.number}
+                    disabled={addressLocked}
                     aria-invalid={Boolean(errors.number)}
                     onChange={(event) => set('number', event.target.value)}
                   />
@@ -588,28 +695,35 @@ function AddressDialog({
                 <Field label="Complemento" htmlFor="addr-complement" error={errors.complement}>
                   <Input
                     id="addr-complement"
+                    placeholder="Apto, bloco, sala…"
                     className={fieldInputClass}
                     value={form.complement}
+                    disabled={addressLocked}
                     onChange={(event) => set('complement', event.target.value)}
                   />
                 </Field>
               </div>
               <Field label="Bairro" htmlFor="addr-district" error={errors.district}>
-                <Input
-                  id="addr-district"
-                  className={fieldInputClass}
-                  value={form.district}
-                  readOnly
-                  aria-invalid={Boolean(errors.district)}
-                />
+                  <Input
+                    id="addr-district"
+                    placeholder="Bairro"
+                    className={fieldInputClass}
+                    value={form.district}
+                    disabled={addressLocked}
+                    readOnly={Boolean(editing)}
+                    aria-invalid={Boolean(errors.district)}
+                    onChange={(event) => set('district', event.target.value)}
+                  />
               </Field>
               <div className="grid grid-cols-[minmax(0,1fr)_6.5rem] gap-3 md:contents">
                 <Field label="Cidade" htmlFor="addr-city" error={errors.city}>
                   <Input
                     id="addr-city"
                     autoComplete="address-level2"
+                    placeholder="Cidade"
                     className={fieldInputClass}
                     value={form.city}
+                    disabled={addressLocked}
                     readOnly
                     aria-invalid={Boolean(errors.city)}
                   />
@@ -617,8 +731,10 @@ function AddressDialog({
                 <Field label="UF" htmlFor="addr-state" error={errors.state}>
                   <Input
                     id="addr-state"
+                    placeholder="UF"
                     className={fieldInputClass}
                     value={form.state}
+                    disabled={addressLocked}
                     readOnly
                     aria-invalid={Boolean(errors.state)}
                   />
@@ -632,7 +748,7 @@ function AddressDialog({
               type="submit"
               className="h-12 w-full md:w-auto md:min-w-44"
               tooltip={false}
-              disabled={pending || lookingUp}
+              disabled={pending || lookingUp || addressLocked}
             >
               {pending ? 'Salvando…' : editing ? 'Salvar alterações' : 'Salvar endereço'}
             </Button>

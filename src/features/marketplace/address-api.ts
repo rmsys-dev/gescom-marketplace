@@ -5,15 +5,21 @@ import type { Address, AddressType } from '@/features/marketplace/types';
 
 export { AuthApiError };
 
-export type CepLookupResponse = {
-  cepId: string;
-  cepNumber: string;
-  address: string;
-  neighborhood: string;
-  cityName: string;
+/** JSON do ViaCEP, no formato aceito por POST/PATCH `/api/v1/addresses`. */
+export type ViaCepAddress = {
+  cep: string;
+  logradouro: string;
+  complemento: string;
+  unidade: string;
+  bairro: string;
+  localidade: string;
   uf: string;
-  cityId: string | null;
-  message?: string;
+  estado: string;
+  regiao: string;
+  ibge: string;
+  gia: string;
+  ddd: string;
+  siafi: string;
 };
 
 export type AddressesResponse = {
@@ -33,54 +39,49 @@ export type SaveAddressResponse = {
   message?: string;
 };
 
+export type AddressPayload = {
+  viaCep: ViaCepAddress;
+  number: string;
+  adressType: AddressType;
+};
+
+function toAddressBody(input: AddressPayload) {
+  return {
+    ...input.viaCep,
+    logradouro: input.viaCep.logradouro.trim(),
+    bairro: input.viaCep.bairro.trim(),
+    complemento: input.viaCep.complemento.trim(),
+    number: input.number.trim(),
+    adressType: input.adressType,
+  };
+}
+
 export async function lookupCep(cep: string) {
   const digits = cep.replace(/\D/g, '');
-  return authFetch<CepLookupResponse>(`/api/conta/cep?cep=${encodeURIComponent(digits)}`);
+  return authFetch<ViaCepAddress>(`/api/conta/cep?cep=${encodeURIComponent(digits)}`);
 }
 
 export async function fetchAddresses() {
   return authFetch<AddressesResponse>('/api/conta/enderecos');
 }
 
-export async function createAddress(input: {
-  cepNumber: string;
-  number: string;
-  complement?: string;
-  adressType: AddressType;
-}) {
+export async function createAddress(input: AddressPayload) {
   return authFetch<SaveAddressResponse>('/api/conta/enderecos', {
     method: 'POST',
-    body: JSON.stringify({
-      ...input,
-      cepNumber: input.cepNumber.replace(/\D/g, ''),
-    }),
+    body: JSON.stringify(toAddressBody(input)),
   });
 }
 
-export async function updateAddress(
-  id: string,
-  input: {
-    cepNumber?: string;
-    number?: string;
-    complement?: string | null;
-    adressType?: AddressType;
-    softDelete?: boolean;
-  },
-) {
-  return authFetch<SaveAddressResponse & { ok?: boolean; id?: string }>(
-    `/api/conta/enderecos/${id}`,
-    {
-      method: 'PATCH',
-      body: JSON.stringify({
-        ...input,
-        ...(input.cepNumber
-          ? { cepNumber: input.cepNumber.replace(/\D/g, '') }
-          : {}),
-      }),
-    },
-  );
+export async function updateAddress(id: string, input: AddressPayload) {
+  return authFetch<SaveAddressResponse>(`/api/conta/enderecos/${id}`, {
+    method: 'PATCH',
+    body: JSON.stringify(toAddressBody(input)),
+  });
 }
 
 export async function deleteAddress(id: string) {
-  return updateAddress(id, { softDelete: true });
+  return authFetch<{ ok: boolean; id: string; deletedAt?: string; message?: string }>(
+    `/api/conta/enderecos/${id}`,
+    { method: 'DELETE' },
+  );
 }
