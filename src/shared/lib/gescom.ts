@@ -1,7 +1,7 @@
 import 'server-only';
 
 function resolveApiUrl() {
-  const raw = process.env.GESCOM_API_URL ?? process.env.API_URL;
+  const raw = process.env.MARKETPLACE_API_URL ?? process.env.API_URL;
   if (!raw) return undefined;
   // Aceita URL com ou sem /api/v1 — os paths do cliente já incluem /api/v1/...
   return raw.replace(/\/$/, '').replace(/\/api\/v1$/i, '');
@@ -56,7 +56,7 @@ export type GescomResult<T> = {
 
 function assertConfig() {
   if (!apiUrl) {
-    throw new GescomError(500, 'CONFIG_ERROR', 'GESCOM_API_URL não está configurada.');
+    throw new GescomError(500, 'CONFIG_ERROR', 'MARKETPLACE_API_URL não está configurada.');
   }
   if (!enterpriseId) {
     throw new GescomError(500, 'CONFIG_ERROR', 'GESCOM_ENTERPRISE_ID não está configurada.');

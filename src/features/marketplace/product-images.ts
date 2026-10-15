@@ -4,7 +4,7 @@ export const PRODUCT_IMAGE_FALLBACK = '/images/product-placeholder.svg';
 const MAX_GALLERY_PHOTOS = 6;
 
 function apiBaseUrl() {
-  const raw = process.env.GESCOM_API_URL ?? process.env.API_URL ?? '';
+  const raw = process.env.MARKETPLACE_API_URL ?? process.env.API_URL ?? '';
   return raw.replace(/\/$/, '').replace(/\/api\/v1$/i, '');
 }
 
@@ -32,17 +32,10 @@ export function resolveProductImages(
   photos: Array<string | null | undefined> | null | undefined,
   photoUrl?: string | null,
 ): string[] {
-  const paths =
-    photos && photos.length > 0
-      ? photos
-      : photoUrl
-        ? [photoUrl]
-        : [];
+  const paths = photos && photos.length > 0 ? photos : photoUrl ? [photoUrl] : [];
 
   const unique = [
-    ...new Set(
-      paths.map(productImageSrc).filter((src): src is string => Boolean(src)),
-    ),
+    ...new Set(paths.map(productImageSrc).filter((src): src is string => Boolean(src))),
   ].slice(0, MAX_GALLERY_PHOTOS);
 
   return unique.length > 0 ? unique : [PRODUCT_IMAGE_FALLBACK];

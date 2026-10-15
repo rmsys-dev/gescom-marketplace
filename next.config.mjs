@@ -1,27 +1,21 @@
 /** @type {import('next').NextConfig} */
-const isProduction = process.env.NODE_ENV === "production"
+const isProduction = process.env.NODE_ENV === 'production';
 
 function gescomApiUrl() {
-  const raw = process.env.GESCOM_API_URL ?? process.env.API_URL
-  if (!raw) return null
+  const raw = process.env.MARKETPLACE_API_URL ?? process.env.API_URL;
+  if (!raw) return null;
   try {
-    return new URL(raw.replace(/\/$/, "").replace(/\/api\/v1$/i, ""))
+    return new URL(raw.replace(/\/$/, '').replace(/\/api\/v1$/i, ''));
   } catch {
-    return null
+    return null;
   }
 }
 
-const gescomApi = gescomApiUrl()
+const gescomApi = gescomApiUrl();
 
-const imgSrc = [
-  "'self'",
-  "data:",
-  "blob:",
-  "https://images.unsplash.com",
-  gescomApi?.origin,
-]
+const imgSrc = ["'self'", 'data:', 'blob:', 'https://images.unsplash.com', gescomApi?.origin]
   .filter(Boolean)
-  .join(" ")
+  .join(' ');
 
 const contentSecurityPolicy = [
   "default-src 'self'",
@@ -33,42 +27,42 @@ const contentSecurityPolicy = [
   "frame-ancestors 'none'",
   "base-uri 'self'",
   "form-action 'self'",
-].join("; ")
+].join('; ');
 
 const securityHeaders = [
-  { key: "X-Frame-Options", value: "DENY" },
-  { key: "X-Content-Type-Options", value: "nosniff" },
-  { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
+  { key: 'X-Frame-Options', value: 'DENY' },
+  { key: 'X-Content-Type-Options', value: 'nosniff' },
+  { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
   {
-    key: "Permissions-Policy",
-    value: "camera=(), microphone=(), geolocation=(self)",
+    key: 'Permissions-Policy',
+    value: 'camera=(), microphone=(), geolocation=(self)',
   },
-  { key: "Content-Security-Policy", value: contentSecurityPolicy },
-]
+  { key: 'Content-Security-Policy', value: contentSecurityPolicy },
+];
 
 if (isProduction) {
   securityHeaders.push({
-    key: "Strict-Transport-Security",
-    value: "max-age=31536000; includeSubDomains",
-  })
+    key: 'Strict-Transport-Security',
+    value: 'max-age=31536000; includeSubDomains',
+  });
 }
 
 /** @type {import('next').NextConfig['images']['remotePatterns']} */
 const remotePatterns = [
   {
-    protocol: "https",
-    hostname: "images.unsplash.com",
-    pathname: "/**",
+    protocol: 'https',
+    hostname: 'images.unsplash.com',
+    pathname: '/**',
   },
-]
+];
 
 if (gescomApi) {
   remotePatterns.push({
-    protocol: gescomApi.protocol.replace(":", ""),
+    protocol: gescomApi.protocol.replace(':', ''),
     hostname: gescomApi.hostname,
     ...(gescomApi.port ? { port: gescomApi.port } : {}),
-    pathname: "/fotos/**",
-  })
+    pathname: '/fotos/**',
+  });
 }
 
 const nextConfig = {
@@ -76,18 +70,18 @@ const nextConfig = {
     // Em dev a API roda em localhost; o otimizador do Next bloqueia IP privado por padrão (SSRF).
     dangerouslyAllowLocalIP: !isProduction,
     dangerouslyAllowSVG: true,
-    contentDispositionType: "attachment",
+    contentDispositionType: 'attachment',
     contentSecurityPolicy: "default-src 'self'; script-src 'none'; sandbox;",
     remotePatterns,
   },
   async headers() {
     return [
       {
-        source: "/((?!api).*)",
+        source: '/((?!api).*)',
         headers: securityHeaders,
       },
-    ]
+    ];
   },
-}
+};
 
-export default nextConfig
+export default nextConfig;
